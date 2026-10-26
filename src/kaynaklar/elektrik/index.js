@@ -2,8 +2,9 @@
 // Yeni şirket eklemek için: ./<kod>.js dosyası (KAYNAK + cek()) yaz, aşağıdaki listeye ekle.
 import { db, durumYaz } from '../../supabase.js';
 import * as bedas from './bedas.js';
+import * as akdeniz from './akdeniz.js';
 
-const KAYNAKLAR = [bedas];
+const KAYNAKLAR = [bedas, akdeniz];
 
 async function kaynagiCalistir(k) {
   const ad = `elektrik-${k.KAYNAK}`;

@@ -1,15 +1,12 @@
-// BEDAŞ (İstanbul Avrupa Yakası) planlı kesintiler
-// Kaynak: https://www.bedas.com.tr/GetItemsData  (GET, tüm planlı kesintiler tek JSON)
+// BEDAŞ (İstanbul Avrupa Yakası) planlı kesintiler — CK Enerji altyapısı
+// Kaynak: https://www.bedas.com.tr/GetItemsData
 //
 // Mesaj kalıbı (keşifle doğrulandı, 127/127 kayıt):
 //   "İSTANBUL ŞİŞLİ ilce MERKEZ-MAHMUT ŞEVKET PAŞA mah ERDEM 1, GAZİLER sk / KUSTEPE mah ... sk
 //    // BEYOĞLU ilce MERKEZ-... mah ... sk  bölgelerinde 26/10/2026 09:00:00 - ..."
 //   - İlçeler "//" ile, aynı ilçedeki mahalleler " / " ile ayrılır
 //   - "SEMT-MAHALLE mah" -> mahalle adı tireden sonrası
-//   - "... sk" sokak listesi (şimdilik sadece saklanıyor)
-
-export const KAYNAK = 'bedas';
-const URL = 'https://www.bedas.com.tr/GetItemsData';
+import { ckKaynagi } from './ck-platform.js';
 
 /** Mesajdan [{ilce, mahalleler:[{ad, sokaklar}]}] çıkarır. */
 export function mesajiCoz(mesaj) {
@@ -35,34 +32,4 @@ export function mesajiCoz(mesaj) {
   return sonuc;
 }
 
-const tarih = (s) => (s ? s.replace(' ', 'T') + '+03:00' : null); // "2026-10-27 09:00:00" -> ISO, İstanbul saati
-
-/** BEDAŞ'tan çek, ortak formata çevir. */
-export async function cek() {
-  const yanit = await fetch(URL, {
-    headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-    signal: AbortSignal.timeout(30000),
-  });
-  if (!yanit.ok) throw new Error(`HTTP ${yanit.status}`);
-  const liste = await yanit.json();
-  if (!Array.isArray(liste)) throw new Error('beklenmeyen format (dizi değil)');
-
-  return liste.map((k) => {
-    const p = k.plannedOutage || {};
-    const bolgeler = mesajiCoz(p.message);
-    const yedekIlceler = [p.county, p.county2, p.county3].filter(Boolean);
-    return {
-      kaynak: KAYNAK,
-      kaynak_id: String(k.id || p.id),
-      il: p.city || 'İSTANBUL',
-      ilceler: bolgeler.length ? bolgeler.map((b) => b.ilce) : yedekIlceler,
-      mahalleler: bolgeler.flatMap((b) => b.mahalleler.map((m) => m.ad)),
-      baslangic: tarih(p.startDateTime),
-      bitis: tarih(p.endDateTime),
-      neden: p.reason || null,
-      mesaj: p.message || null,
-      detay: bolgeler,
-      guncelleme: k.updateDateTime || null,
-    };
-  });
-}
+export const { KAYNAK, cek } = ckKaynagi({ kaynak: 'bedas', url: 'https://www.bedas.com.tr/GetItemsData', cozucu: mesajiCoz, varsayilanIl: 'İSTANBUL' });
