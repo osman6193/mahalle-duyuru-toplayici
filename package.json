@@ -1,0 +1,17 @@
+{
+  "name": "mahalle-duyuru-toplayici",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Türkiye sunucusunda çalışan veri toplayıcı: AFAD depremleri ve elektrik dağıtım şirketlerinin planlı kesintileri",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "calistir": "node --env-file=.env src/calistir.js",
+    "kesif": "node --env-file=.env src/kesif.js",
+    "test-baglanti": "node --env-file=.env src/test-baglanti.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "playwright": "1.48.2"
+  }
+}
