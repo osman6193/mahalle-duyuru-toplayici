@@ -3,8 +3,9 @@
 import { db, durumYaz } from '../../supabase.js';
 import * as bedas from './bedas.js';
 import * as akdeniz from './akdeniz.js';
+import * as uludag from './uludag.js';
 
-const KAYNAKLAR = [bedas, akdeniz];
+const KAYNAKLAR = [bedas, akdeniz, uludag];
 
 async function kaynagiCalistir(k) {
   const ad = `elektrik-${k.KAYNAK}`;
