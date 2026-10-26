@@ -46,7 +46,6 @@ sudo -u "$KULLANICI" npm ci --omit=dev
 mkdir -p "$PLAYWRIGHT_BROWSERS_PATH"
 npx --yes playwright install --with-deps chromium
 chown -R "$KULLANICI":"$KULLANICI" "$PLAYWRIGHT_BROWSERS_PATH"
-echo "PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH" > /etc/environment.d/playwright.conf 2>/dev/null || true
 
 adim "6/7 Supabase anahtarı"
 if [ ! -f "$DIZIN/.env" ]; then
