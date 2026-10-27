@@ -5,7 +5,9 @@ import * as bedas from './bedas.js';
 import * as akdeniz from './akdeniz.js';
 import * as uludag from './uludag.js';
 import * as sedas from './sedas.js';
+import * as yesilirmak from './yesilirmak.js';
+import * as aras from './aras.js';
 
-const KAYNAKLAR = [bedas, akdeniz, uludag, sedas];
+const KAYNAKLAR = [bedas, akdeniz, uludag, sedas, yesilirmak, aras];
 
 export const elektrikCalistir = () => kesintileriCalistir('elektrik', KAYNAKLAR);
