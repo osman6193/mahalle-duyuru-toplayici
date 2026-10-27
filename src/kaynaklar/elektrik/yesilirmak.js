@@ -14,7 +14,9 @@ function zaman(details, etiket) {
   const m = String(details || '').match(new RegExp(`${etiket}[^\\d]*(\\d{2})\\.(\\d{2})\\.(\\d{4})\\s+(\\d{2}):(\\d{2})`));
   return m ? `${m[3]}-${m[2]}-${m[1]}T${m[4]}:${m[5]}:00+03:00` : null;
 }
-const mahAdi = (s) => String(s || '').replace(/\s+(MH|MAH|MAHALLESİ)\.?$/i, '').trim();
+// "DÜVECİK MH." / "GÜNEY KY." / "CEMİLBEY BC. SAZAK KY." (BC = belde) -> çıplak ad
+const mahAdi = (s) => String(s || '').replace(/^.*\bBC\.\s*/, '')
+  .replace(/\s+(MH|MAH|MAHALLESİ|KY|KÖYÜ|KÖY)\.?$/i, '').trim();
 
 export async function cek() {
   const yanit = await fetch(URL, {

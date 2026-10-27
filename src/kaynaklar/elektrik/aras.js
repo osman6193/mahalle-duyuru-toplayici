@@ -9,7 +9,7 @@
 
 export const KAYNAK = 'aras';
 const URL = 'https://arasedas.com/api/planli-bakim-kesintileri/paginated';
-const MAKS_SAYFA = 20;
+const MAKS_SAYFA = 40;
 
 // "etkilenen yerler/bölgeler/müşterilerimiz ..." sonrasındaki listeden yer adları
 // Not: JS'de /i bayrağı "İ"yi "i"ye katlamaz; bu yüzden aramalar tr küçük harfli kopya üzerinde yapılır.
@@ -48,8 +48,8 @@ export async function cek() {
     const yanit = await fetch(URL, {
       method: 'POST',
       headers: { 'User-Agent': 'Mozilla/5.0', 'Content-Type': 'application/json', Accept: 'application/json', Referer: 'https://arasedas.com/' },
-      body: JSON.stringify({ pageNumber: sayfa, pageSize: 100, orderBy: { plannedStartedAt: 'desc' }, filter: {} }),
-      signal: AbortSignal.timeout(30000),
+      body: JSON.stringify({ pageNumber: sayfa, pageSize: 50, orderBy: { plannedStartedAt: 'desc' }, filter: {} }),
+      signal: AbortSignal.timeout(90000),   // sunucu yavaş: ilk turda 30 sn yetmedi
     });
     if (!yanit.ok) throw new Error(`HTTP ${yanit.status} (sayfa ${sayfa})`);
     const veri = await yanit.json();

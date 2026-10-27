@@ -8,6 +8,7 @@ import { ornekSakla } from '../kesinti-calistir.js';
 
 export const KAYNAK = 'iski';
 const URL = 'https://iskiapi.iski.gov.tr/api/iski/bolgeselAriza/listesi';
+const SAYFA = 'https://iski.istanbul/abone-hizmetleri/ariza-kesinti/';
 
 const al = (o, ...adlar) => { for (const a of adlar) if (o?.[a] != null && o[a] !== '') return o[a]; return null; };
 function tarih(s) {
@@ -17,13 +18,26 @@ function tarih(s) {
   return /[zZ]|[+-]\d{2}:?\d{2}$/.test(s) ? s : `${String(s).slice(0, 19)}+03:00`;
 }
 
+// Uç nokta düz istekle 403 veriyor (Strapi yetkisi tarayıcıdaki sayfa oturumuna bağlı).
+// Bu yüzden sayfayı gerçek bir tarayıcıda açıp sitenin kendi yaptığı isteğin cevabını okuyoruz.
+async function tarayiciylaOku() {
+  const { chromium } = await import('playwright');
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const context = await browser.newContext({ locale: 'tr-TR', userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36' });
+    const page = await context.newPage();
+    const cevapBekle = page.waitForResponse((r) => r.url().includes('/bolgeselAriza/listesi'), { timeout: 60000 });
+    await page.goto(SAYFA, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    const cevap = await cevapBekle;
+    if (!cevap.ok()) throw new Error(`HTTP ${cevap.status()} (tarayıcı içinden)`);
+    return await cevap.text();
+  } finally {
+    await browser.close();
+  }
+}
+
 export async function cek() {
-  const yanit = await fetch(URL, {
-    headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json', Origin: 'https://iski.istanbul', Referer: 'https://iski.istanbul/' },
-    signal: AbortSignal.timeout(30000),
-  });
-  if (!yanit.ok) throw new Error(`HTTP ${yanit.status}`);
-  const metin = await yanit.text();
+  const metin = await tarayiciylaOku();
   const veri = JSON.parse(metin);
   const liste = Array.isArray(veri?.data) ? veri.data : Array.isArray(veri?.data?.items) ? veri.data.items : Array.isArray(veri) ? veri : null;
   if (!liste) return [];                       // "kesinti bulunmamaktadır"
