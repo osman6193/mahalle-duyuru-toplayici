@@ -52,7 +52,8 @@ export async function cek() {
   const yanit = await fetch(URL, { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'text/html' }, signal: AbortSignal.timeout(30000) });
   if (!yanit.ok) throw new Error(`HTTP ${yanit.status}`);
   const html = await yanit.text();
-  if (/id="PnlArizaYok"/.test(html) && !/<ul class="history">\s*<li/i.test(html)) return [];
+  // "Kesinti Bulunamadı" paneli varsa liste boştur (panelin içinde de bir ul.history/li var, ona aldanma)
+  if (/id="PnlArizaYok"/.test(html)) return [];
   await ornekSakla(KAYNAK, URL, html);
   return coz(html);
 }
