@@ -75,12 +75,18 @@ Deno.serve(async (req) => {
     // DENEME MODU: Firebase bağlanana kadar gerçekten gönderme
     sonuclar = (satirlar as Satir[]).map((s) => ({ id: s.id, durum: 'deneme' as const }));
   } else {
-    const sa = JSON.parse(saJson);
-    const erisim = await erisimAnahtari(sa);
+    let sa: { client_email?: string; private_key?: string; project_id?: string; type?: string };
+    try { sa = JSON.parse(saJson); } catch { return new Response('FIREBASE_SERVICE_ACCOUNT geçerli bir JSON değil', { status: 500 }); }
+    if (!sa.private_key || !sa.client_email || !sa.project_id) {
+      const ipucu = (sa as Record<string, unknown>).project_info ? ' (google-services.json yapıştırılmış görünüyor; Proje ayarları > Hizmet hesapları > Yeni özel anahtar oluştur ile inen dosya gerekli)' : '';
+      console.error('FIREBASE_SERVICE_ACCOUNT eksik alan: private_key/client_email/project_id' + ipucu);
+      return new Response('FIREBASE_SERVICE_ACCOUNT bir hizmet hesabı anahtarı değil' + ipucu, { status: 500 });
+    }
+    const erisim = await erisimAnahtari(sa as { client_email: string; private_key: string });
     sonuclar = [];
     const liste = satirlar as Satir[];
     for (let i = 0; i < liste.length; i += 25) {   // 25'erli paralel
-      sonuclar.push(...await Promise.all(liste.slice(i, i + 25).map((s) => gonder(s, sa.project_id, erisim).catch(
+      sonuclar.push(...await Promise.all(liste.slice(i, i + 25).map((s) => gonder(s, sa.project_id!, erisim).catch(
         (e) => ({ id: s.id, durum: 'hata' as const, hata: String(e).slice(0, 300) })))));
     }
   }
