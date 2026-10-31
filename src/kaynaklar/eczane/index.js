@@ -17,6 +17,12 @@ function nobetGunu() {
 // ISO zamanın Türkiye saatine göre günü (06:30Z → aynı gün; 22:00Z → ertesi gün)
 const trGunu = (iso) => new Date(new Date(iso).getTime() + 3 * 3600_000).toISOString().slice(0, 10);
 
+function devirSaati() {
+  const s = new Date(Date.now() + 3 * 3600_000);
+  const dk = s.getUTCHours() * 60 + s.getUTCMinutes();
+  return dk >= 8 * 60 + 20 && dk <= 10 * 60 + 30;
+}
+
 async function sonBasari(kaynak) {
   const { data } = await db.from('toplayici_durum').select('son_basari').eq('kaynak', kaynak).maybeSingle();
   return data?.son_basari ? new Date(data.son_basari).getTime() : 0;
@@ -25,7 +31,8 @@ async function sonBasari(kaynak) {
 export async function eczaneCalistir({ zorla = false } = {}) {
   for (const k of KAYNAKLAR) {
     // 10 dakikalık cron'da her kaynağı saatte bir oku
-    if (!zorla && Date.now() - (await sonBasari(k.KAYNAK)) < 55 * 60_000) continue;
+    // Sabah nöbet devrinde (08:20–10:30) her turda oku ki yeni liste gecikmesin
+    if (!zorla && !devirSaati() && Date.now() - (await sonBasari(k.KAYNAK)) < 55 * 60_000) continue;
     try {
       const liste = await k.cek();
       if (!liste.length) throw new Error('liste boş geldi (site biçimi değişmiş olabilir)');
