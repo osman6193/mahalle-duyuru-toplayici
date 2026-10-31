@@ -9,7 +9,9 @@ import * as yesilirmak from './yesilirmak.js';
 import * as aras from './aras.js';
 import * as vedas from './vedas.js';
 import * as kcetas from './kcetas.js';
+import * as coruh from './coruh.js';
+import * as firat from './firat.js';
 
-const KAYNAKLAR = [bedas, akdeniz, uludag, sedas, yesilirmak, aras, vedas, kcetas];
+const KAYNAKLAR = [bedas, akdeniz, uludag, sedas, yesilirmak, aras, vedas, kcetas, coruh, firat];
 
 export const elektrikCalistir = () => kesintileriCalistir('elektrik', KAYNAKLAR);
