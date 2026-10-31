@@ -1,10 +1,13 @@
 // Akaryakıt fiyatları (dağıtıcıların kendi sitelerinden, il bazında). 2 saatte bir okunur;
 // gece yarısı zam/indirim saatlerinde (00:00–01:30) her turda.
-import { db, durumYaz } from '../../supabase.js';
+import { db, durumYaz, hataMetni } from '../../supabase.js';
 import * as opet from './opet.js';
 import * as po from './po.js';
+import * as shell from './shell.js';
+import * as alpet from './alpet.js';
+import * as tp from './tp.js';
 
-const KAYNAKLAR = [opet, po];
+const KAYNAKLAR = [opet, po, shell, alpet, tp];
 
 const trSimdi = () => new Date(Date.now() + 3 * 3600_000);
 const bugun = () => trSimdi().toISOString().slice(0, 10);
@@ -35,7 +38,7 @@ export async function akaryakitCalistir({ zorla = false } = {}) {
       await durumYaz(kaynak, { basarili: true, adet: data });
     } catch (e) {
       console.error(`[${kaynak}] hata:`, e.message);
-      await durumYaz(kaynak, { basarili: false, hata: e.message });
+      await durumYaz(kaynak, { basarili: false, hata: hataMetni(e) });
     }
   }
 }
