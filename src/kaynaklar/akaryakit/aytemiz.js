@@ -12,16 +12,22 @@ const temiz = (s) => s.replace(/<[^>]+>/g, '').replace(/&#(\d+);/g, (_, n) => St
  *  Ham sayfa sıkıştırılmış: tırnaksız öznitelikler (id=fuel-price-table), </td> ve </tr> yok.
  *  Bu yüzden satırları "<tr", hücreleri "<td" ile böleriz. */
 export function satirlar(html) {
-  const bas = html.search(/<table[^>]*id=["']?fuel-price-table/);
-  if (bas < 0) return [];
-  const son = html.indexOf('</table>', bas);
-  const tablo = html.slice(bas, son > 0 ? son : bas + 60000);
-  return tablo
-    .split(/<tr[\s>]/)
-    .slice(1)
-    .filter((tr) => /<td[\s>]/.test(tr))
-    .map((tr) => tr.split(/<td[\s>]/).slice(1).map((h) => temiz(h.replace(/^[^>]*>/, (m) => (m.includes('<') ? m : '')))))
-    .filter((h) => h.length >= 2 && sayi(h[1]) != null); // başlık satırı (İl | Oto LPG) elenir
+  // Sayfada birden fazla tablo olabiliyor (LPG sayfasında id'li tablo boş, veri ikinci tabloda);
+  // başlığı fuelPricesHeader olanların en dolusunu al.
+  let enIyi = [];
+  for (const parca of html.split(/<table[\s>]/).slice(1)) {
+    if (!/fuelPricesHeader/.test(parca.slice(0, 3000))) continue;
+    const son = parca.indexOf('</table>');
+    const tablo = son > 0 ? parca.slice(0, son) : parca.slice(0, 60000);
+    const s = tablo
+      .split(/<tr[\s>]/)
+      .slice(1)
+      .filter((tr) => /<td[\s>]/.test(tr))
+      .map((tr) => tr.split(/<td[\s>]/).slice(1).map((h) => temiz(h.replace(/^[^>]*>/, (m) => (m.includes('<') ? m : '')))))
+      .filter((h) => h.length >= 2 && sayi(h[1]) != null); // başlık satırı (İl | Oto LPG) elenir
+    if (s.length > enIyi.length) enIyi = s;
+  }
+  return enIyi;
 }
 
 /** "İstanbul / Anadolu" -> { anahtar: "ISTANBUL", bolge: "Anadolu" } */
