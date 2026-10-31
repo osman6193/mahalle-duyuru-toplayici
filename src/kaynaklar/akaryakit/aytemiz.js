@@ -8,14 +8,20 @@ export const DAGITICI = 'aytemiz';
 const KOK = 'https://www.aytemiz.com.tr/akaryakit-fiyatlari';
 const temiz = (s) => s.replace(/<[^>]+>/g, '').replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n)).trim();
 
-/** [[il adı, hücre1, hücre2, ...], ...] */
+/** [[il adı, hücre1, hücre2, ...], ...]
+ *  Ham sayfa sıkıştırılmış: tırnaksız öznitelikler (id=fuel-price-table), </td> ve </tr> yok.
+ *  Bu yüzden satırları "<tr", hücreleri "<td" ile böleriz. */
 export function satirlar(html) {
-  const t = html.match(/<table id="fuel-price-table"[\s\S]*?<\/table>/)?.[0] ?? '';
-  return (t.match(/<tbody[\s\S]*?<\/tbody>/)?.[0] ?? '')
-    .split(/<tr[^>]*>/)
+  const bas = html.search(/<table[^>]*id=["']?fuel-price-table/);
+  if (bas < 0) return [];
+  const son = html.indexOf('</table>', bas);
+  const tablo = html.slice(bas, son > 0 ? son : bas + 60000);
+  return tablo
+    .split(/<tr[\s>]/)
     .slice(1)
-    .map((tr) => [...tr.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((m) => temiz(m[1])))
-    .filter((h) => h.length >= 2);
+    .filter((tr) => /<td[\s>]/.test(tr))
+    .map((tr) => tr.split(/<td[\s>]/).slice(1).map((h) => temiz(h.replace(/^[^>]*>/, (m) => (m.includes('<') ? m : '')))))
+    .filter((h) => h.length >= 2 && sayi(h[1]) != null); // başlık satırı (İl | Oto LPG) elenir
 }
 
 /** "İstanbul / Anadolu" -> { anahtar: "ISTANBUL", bolge: "Anadolu" } */
