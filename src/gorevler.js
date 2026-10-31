@@ -9,6 +9,7 @@
 //     adim örnekleri: {secim:"#IlKodu", index:1} | {secim:"#IlKodu", deger:"01"}
 //                     {tikla:"#btnSorgula"} | {tiklaYazi:"Sorgula"} | {yaz:"#ara", deger:"x"} | {bekle:3000}
 import { db, hataMetni } from './supabase.js';
+import { getir } from './getir.js';
 
 const MAKS = 300_000;
 const BEKLE = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -23,7 +24,7 @@ async function kaydet(gorevId, satirlar) {
 
 async function istekGorevi(g) {
   const p = g.parametreler;
-  const yanit = await fetch(p.url, {
+  const yanit = await getir(p.url, {
     method: p.method || 'GET',
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36', ...(p.headers || {}) },
     body: p.govde ? (typeof p.govde === 'string' ? p.govde : JSON.stringify(p.govde)) : undefined,

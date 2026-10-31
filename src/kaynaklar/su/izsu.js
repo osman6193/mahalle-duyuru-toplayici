@@ -7,6 +7,7 @@
 //   (giderilme saati uzatılabildiği için kimliğe katılmaz).
 // Aynı sayfadaki "Planlı Bakım Bilgileri" serbest HTML metin; şimdilik okunmuyor.
 import { createHash } from 'node:crypto';
+import { getir } from '../../getir.js';
 
 export const KAYNAK = 'izsu';
 const URL = 'https://www.izsu.gov.tr/bilgi-merkezi/ariza-ve-bakim-bilgisi-sorgulama';
@@ -59,7 +60,8 @@ export function coz(html) {
 }
 
 export async function cek() {
-  const yanit = await fetch(URL, { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'text/html' }, signal: AbortSignal.timeout(30000) });
+  // İZSU ara sertifikayı göndermiyor; getir() zinciri tamamlayıp doğrulamalı istek atar
+  const yanit = await getir(URL, { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'text/html' }, signal: AbortSignal.timeout(30000) });
   if (!yanit.ok) throw new Error(`HTTP ${yanit.status}`);
   return coz(await yanit.text());
 }
