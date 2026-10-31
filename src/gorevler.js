@@ -8,7 +8,7 @@
 //  tarayici : {url, adimlar?:[...], scriptleriKaydet?, anahtar?, bekle?}
 //     adim örnekleri: {secim:"#IlKodu", index:1} | {secim:"#IlKodu", deger:"01"}
 //                     {tikla:"#btnSorgula"} | {tiklaYazi:"Sorgula"} | {yaz:"#ara", deger:"x"} | {bekle:3000}
-import { db } from './supabase.js';
+import { db, hataMetni } from './supabase.js';
 
 const MAKS = 300_000;
 const BEKLE = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -36,6 +36,30 @@ async function istekGorevi(g) {
     icerik_tipi: (yanit.headers.get('content-type') || '').slice(0, 200), icerik,
   }]);
   return `HTTP ${yanit.status}, ${icerik.length} karakter`;
+}
+
+/** TLS teşhisi: sertifika neden reddediliyor? (süresi dolmuş, ara sertifika eksik, isim uyuşmuyor...) */
+async function tlsGorevi(g) {
+  const tls = await import('node:tls');
+  const { host, port = 443 } = g.parametreler;
+  const sonuc = await new Promise((coz, red) => {
+    const s = tls.connect({ host, port, servername: host, rejectUnauthorized: false, timeout: 20000 }, () => {
+      const zincir = [];
+      let c = s.getPeerCertificate(true);
+      const goruldu = new Set();
+      while (c && c.fingerprint256 && !goruldu.has(c.fingerprint256)) {
+        goruldu.add(c.fingerprint256);
+        zincir.push({ konu: c.subject?.CN, veren: c.issuer?.CN, bas: c.valid_from, bit: c.valid_to, san: c.subjectaltname?.slice(0, 300) });
+        c = c.issuerCertificate;
+      }
+      coz({ yetkili: s.authorized, hata: s.authorizationError ? String(s.authorizationError) : null, protokol: s.getProtocol(), zincir });
+      s.end();
+    });
+    s.on('error', red);
+    s.on('timeout', () => { s.destroy(); red(new Error('zaman aşımı')); });
+  });
+  await kaydet(g.id, [{ tur: 'istek', url: `tls://${host}:${port}`, method: 'TLS', durum: sonuc.yetkili ? 200 : 495, icerik_tipi: 'application/json', icerik: JSON.stringify(sonuc, null, 1) }]);
+  return `${sonuc.yetkili ? 'geçerli' : `GEÇERSİZ: ${sonuc.hata}`} · ${sonuc.zincir.map((z) => `${z.konu} (${z.bit})`).join(' ← ')}`;
 }
 
 async function tarayiciGorevi(g, browser) {
@@ -114,11 +138,12 @@ export async function gorevleriCalistir(adet = 3) {
     let durum = 'bitti', ozet;
     try {
       if (g.tip === 'istek') ozet = await istekGorevi(g);
+      else if (g.tip === 'tls') ozet = await tlsGorevi(g);
       else {
         if (!browser) { const { chromium } = await import('playwright'); browser = await chromium.launch({ headless: true }); }
         ozet = await tarayiciGorevi(g, browser);
       }
-    } catch (e) { durum = 'hata'; ozet = e.message.slice(0, 2000); }
+    } catch (e) { durum = 'hata'; ozet = hataMetni(e).slice(0, 2000); }
     await db.from('kesif_gorevleri').update({ durum, sonuc_ozet: ozet, bitis: new Date().toISOString() }).eq('id', g.id);
     console.log(`[görev ${g.id}] ${durum}: ${ozet.slice(0, 150)}`);
   }

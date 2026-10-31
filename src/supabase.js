@@ -18,3 +18,10 @@ export async function durumYaz(kaynak, { basarili, adet = null, hata = null }) {
   const { error } = await db.from('toplayici_durum').upsert(kayit);
   if (error) console.error(`[durum] ${kaynak}:`, error.message);
 }
+
+/** "fetch failed" yerine asıl sebebi de yaz (örn. CERT_HAS_EXPIRED, ENOTFOUND) */
+export function hataMetni(e) {
+  const neden = e?.cause ? ` (${e.cause.code || ''} ${e.cause.message || ''})`.replace(/\s+\)/, ')') : '';
+  return `${e?.message || e}${neden}`;
+}
+

@@ -2,7 +2,7 @@
 // Her kaynak modülü: export const KAYNAK = '<kod>'; export async function cek() -> [kesinti]
 // kesinti: { kaynak, kaynak_id, il, ilceler, detay:[{ilce, mahalleler:[{ad}]}], baslangic, bitis, neden, aciklama? }
 // Kategori ('elektrik' | 'su' | 'dogalgaz') her kesintiye eklenir; Supabase başlığı ve bildirimi buna göre kurar.
-import { db, durumYaz } from '../supabase.js';
+import { db, durumYaz, hataMetni } from '../supabase.js';
 
 async function kaynagiCalistir(kategori, k) {
   const ad = `${kategori}-${k.KAYNAK}`;
@@ -32,7 +32,7 @@ async function kaynagiCalistir(kategori, k) {
     await durumYaz(ad, { basarili: !sayac.hata, adet: kesintiler.length, hata: sayac.hata ? `${sayac.hata} kayıt hatası` : null });
   } catch (e) {
     console.error(`[${ad}] hata:`, e.message);
-    await durumYaz(ad, { basarili: false, hata: e.message });
+    await durumYaz(ad, { basarili: false, hata: hataMetni(e) });
   }
 }
 
