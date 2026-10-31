@@ -2,8 +2,16 @@
 // Yeni il eklemek için: ./<il>.js dosyası (KAYNAK, IL_ID, cek()) yaz, aşağıdaki listeye ekle.
 import { db, durumYaz } from '../../supabase.js';
 import * as bursa from './bursa.js';
+import * as izmir from './izmir.js';
 
-const KAYNAKLAR = [bursa];
+const KAYNAKLAR = [bursa, izmir];
+
+// Saat yazmayan sitelerde: sabah 08:30'dan önce görünen liste dünkü nöbettir
+function nobetGunu() {
+  const s = new Date(Date.now() + 3 * 3600_000); // Türkiye saati (UTC+3)
+  if (s.getUTCHours() * 60 + s.getUTCMinutes() < 8 * 60 + 30) s.setUTCDate(s.getUTCDate() - 1);
+  return s.toISOString().slice(0, 10);
+}
 
 async function sonBasari(kaynak) {
   const { data } = await db.from('toplayici_durum').select('son_basari').eq('kaynak', kaynak).maybeSingle();
@@ -20,7 +28,7 @@ export async function eczaneCalistir({ zorla = false } = {}) {
       // Nöbet başlangıç gününe göre grupla (genelde tek gün)
       const gunler = new Map();
       for (const e of liste) {
-        const gun = (e.baslangic ?? new Date().toISOString()).slice(0, 10);
+        const gun = e.baslangic ? e.baslangic.slice(0, 10) : nobetGunu();
         if (!gunler.has(gun)) gunler.set(gun, []);
         gunler.get(gun).push(e);
       }
