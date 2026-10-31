@@ -14,6 +14,6 @@ await elektrikCalistir();
 await suCalistir();
 await eczaneCalistir();
 await akaryakitCalistir();
-await gorevleriCalistir(3);   // Claude'un keşif görevleri (yoksa hiçbir şey yapmaz)
+await gorevleriCalistir(8);   // Claude'un keşif görevleri (yoksa hiçbir şey yapmaz)
 
 console.log(`bitti (${((Date.now() - baslangic) / 1000).toFixed(1)} sn)`);
