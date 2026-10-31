@@ -1,5 +1,5 @@
 // Kayseri ve Civarı Elektrik T.A.Ş. (KCETAŞ) planlı kesintiler ve bakımlar
-// Kaynak: https://www.kcetas.com.tr/tr/planli-kesintiler-bakimlar  (sunucu tarafında çizilen tablo, gün gün)
+// Kaynak: https://www.kcetas.com.tr/tr/planli-kesintiler-bakimlar  (tablo gün gün; veri: islemler/planli_kesinti_veri.php)
 //   <tr data-pk-satir data-ilce="KOCASİNAN"> <td ilce> <td adres><button data-pk-tam="… MAH. … SOK. … / …">
 //   <td tarih> 31.10.2026 <td saat_araligi> 08:45 - 17:00 <td sure> <td durum>
 //   İptal edilenlerin adresi "(İPTAL EDİLDİ)" ile başlar; bunlar listeye alınmaz (senkron iptal eder).
@@ -53,13 +53,23 @@ export function coz(html) {
   return sonuc;
 }
 
+// Tarih seçilince sayfanın kullandığı uç nokta: POST modul_id=26&tarih=YYYY-MM-DD → {durum:"ok", html:"<table…>"}
 async function sayfa(tarih) {
-  const yanit = await fetch(`${URL}?tarih=${tarih}`, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36' },
+  const yanit = await fetch('https://www.kcetas.com.tr/islemler/planli_kesinti_veri.php', {
+    method: 'POST',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36',
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'X-Requested-With': 'XMLHttpRequest',
+      Referer: URL,
+    },
+    body: `modul_id=26&tarih=${tarih}`,
     signal: AbortSignal.timeout(45000),
   });
   if (!yanit.ok) throw new Error(`HTTP ${yanit.status}`);
-  return yanit.text();
+  const veri = await yanit.json();
+  if (veri.durum !== 'ok' || typeof veri.html !== 'string') throw new Error(`beklenmeyen yanıt (${veri.durum})`);
+  return veri.html;
 }
 
 export async function cek() {
@@ -67,7 +77,6 @@ export async function cek() {
   for (let i = 0; i < GUN; i++) {
     const t = new Date(Date.now() + 3 * 3600_000 + i * 86400_000).toISOString().slice(0, 10);
     const html = await sayfa(t);
-    // Site tarih parametresini tanımazsa hep bugünü döndürür; aynı kayıtlar tekrar eklenmez
     for (const k of coz(html)) tum.set(k.kaynak_id, k);
   }
   return [...tum.values()];
