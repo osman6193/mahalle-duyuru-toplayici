@@ -6,8 +6,9 @@ import * as po from './po.js';
 import * as shell from './shell.js';
 import * as alpet from './alpet.js';
 import * as tp from './tp.js';
+import * as lukoil from './lukoil.js';
 
-const KAYNAKLAR = [opet, po, shell, alpet, tp];
+const KAYNAKLAR = [opet, po, shell, alpet, tp, lukoil];
 
 const trSimdi = () => new Date(Date.now() + 3 * 3600_000);
 const bugun = () => trSimdi().toISOString().slice(0, 10);
