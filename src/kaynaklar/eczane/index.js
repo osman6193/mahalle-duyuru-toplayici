@@ -3,8 +3,9 @@
 import { db, durumYaz } from '../../supabase.js';
 import * as bursa from './bursa.js';
 import * as izmir from './izmir.js';
+import * as ankara from './ankara.js';
 
-const KAYNAKLAR = [bursa, izmir];
+const KAYNAKLAR = [bursa, izmir, ankara];
 
 // Saat yazmayan sitelerde: sabah 08:30'dan önce görünen liste dünkü nöbettir
 function nobetGunu() {
@@ -12,6 +13,9 @@ function nobetGunu() {
   if (s.getUTCHours() * 60 + s.getUTCMinutes() < 8 * 60 + 30) s.setUTCDate(s.getUTCDate() - 1);
   return s.toISOString().slice(0, 10);
 }
+
+// ISO zamanın Türkiye saatine göre günü (06:30Z → aynı gün; 22:00Z → ertesi gün)
+const trGunu = (iso) => new Date(new Date(iso).getTime() + 3 * 3600_000).toISOString().slice(0, 10);
 
 async function sonBasari(kaynak) {
   const { data } = await db.from('toplayici_durum').select('son_basari').eq('kaynak', kaynak).maybeSingle();
@@ -25,16 +29,19 @@ export async function eczaneCalistir({ zorla = false } = {}) {
     try {
       const liste = await k.cek();
       if (!liste.length) throw new Error('liste boş geldi (site biçimi değişmiş olabilir)');
-      // Nöbet başlangıç gününe göre grupla (genelde tek gün)
-      const gunler = new Map();
+      // Nöbet başlangıç gününe ve ile göre grupla (genelde tek gün, tek il; Ankara odası Kırıkkale'yi de kapsar)
+      const gruplar = new Map();
       for (const e of liste) {
-        const gun = e.baslangic ? e.baslangic.slice(0, 10) : nobetGunu();
-        if (!gunler.has(gun)) gunler.set(gun, []);
-        gunler.get(gun).push(e);
+        const gun = e.baslangic ? trGunu(e.baslangic) : nobetGunu();
+        const il = e.il_id ?? k.IL_ID;
+        const anahtar = `${il}|${gun}`;
+        if (!gruplar.has(anahtar)) gruplar.set(anahtar, { il, gun, grup: [] });
+        gruplar.get(anahtar).grup.push(e);
       }
       let toplam = 0;
-      for (const [gun, grup] of gunler) {
-        const { data, error } = await db.rpc('nobet_kaydet', { p_kaynak: k.KAYNAK, p_gun: gun, p_il_id: k.IL_ID, p_liste: grup });
+      for (const { il, gun, grup } of gruplar.values()) {
+        const kaynak = il === k.IL_ID ? k.KAYNAK : `${k.KAYNAK}-${il}`;
+        const { data, error } = await db.rpc('nobet_kaydet', { p_kaynak: kaynak, p_gun: gun, p_il_id: il, p_liste: grup });
         if (error) throw new Error(error.message);
         toplam += data ?? 0;
       }
