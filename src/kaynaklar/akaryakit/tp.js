@@ -9,10 +9,12 @@ const KOK = 'https://www.tppd.com.tr';
 const temiz = (s) => s.replace(/<[^>]+>/g, '').replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n)).trim();
 
 /** Ana sayfadan [{ad, yol}] il bağlantıları */
-export function ilBaglantilari(html) {
+export function ilBaglantilari(ham) {
+  // Ham sayfada Türkçe harfler &#220; gibi kodlu gelebiliyor
+  const html = ham.replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n));
   const gorulen = new Set();
   const sonuc = [];
-  for (const m of html.matchAll(/<a href="(\/[a-z0-9-]+-akaryakit-fiyatlari)"[^>]*>\s*([^<]+?)\s+GÜNCEL/g)) {
+  for (const m of html.matchAll(/<a href="(\/[a-z0-9-]+-akaryakit-fiyatlari)"[^>]*>\s*([^<]+?)\s+G[ÜU]NCEL/gi)) {
     if (gorulen.has(m[1])) continue;
     gorulen.add(m[1]);
     sonuc.push({ yol: m[1], ad: temiz(m[2]) });
@@ -20,7 +22,8 @@ export function ilBaglantilari(html) {
   return sonuc;
 }
 
-export function tabloCoz(html) {
+export function tabloCoz(ham) {
+  const html = ham.replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n));
   const tablo = html.match(/<table[\s\S]*?<\/table>/)?.[0];
   if (!tablo) return [];
   const satirlar = [];
