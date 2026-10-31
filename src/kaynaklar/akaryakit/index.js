@@ -1,4 +1,5 @@
-// Akaryakıt fiyatları (dağıtıcıların kendi sitelerinden, il bazında). 2 saatte bir okunur;
+// Akaryakıt fiyatları (dağıtıcıların kendi sitelerinden, il bazında): Opet, PO, Shell, Alpet, TP, Lukoil, Aytemiz.
+// 2 saatte bir okunur;
 // gece yarısı zam/indirim saatlerinde (00:00–01:30) her turda.
 import { db, durumYaz, hataMetni } from '../../supabase.js';
 import * as opet from './opet.js';
@@ -7,8 +8,9 @@ import * as shell from './shell.js';
 import * as alpet from './alpet.js';
 import * as tp from './tp.js';
 import * as lukoil from './lukoil.js';
+import * as aytemiz from './aytemiz.js';
 
-const KAYNAKLAR = [opet, po, shell, alpet, tp, lukoil];
+const KAYNAKLAR = [opet, po, shell, alpet, tp, lukoil, aytemiz];
 
 const trSimdi = () => new Date(Date.now() + 3 * 3600_000);
 const bugun = () => trSimdi().toISOString().slice(0, 10);
