@@ -5,6 +5,7 @@ IP'leri engellediği için veriyi buradan toplayıp Supabase'e (`mahalle-duyuru`
 
 ## Ne yapar?
 - **AFAD**: her 10 dakikada son 6 saatin depremleri → `afad_ham_isle()`
+- **Akaryakıt zam haberleri**: 20 dakikada bir Google Haberler RSS → `akaryakit_haber_kaydet()` (taslak; yönetici onaylar)
 - **Elektrik kesintileri**: (keşiften sonra eklenecek) → `elektrik_kesinti_kaydet()`
 - **Keşif aracı** (`npm run kesif`): 21 dağıtım şirketinin kesinti sayfalarını gerçek tarayıcıyla
   açar, arka plandaki veri isteklerini `kesif_kayitlari` tablosuna yazar.

@@ -4,6 +4,7 @@ import { elektrikCalistir } from './kaynaklar/elektrik/index.js';
 import { suCalistir } from './kaynaklar/su/index.js';
 import { eczaneCalistir } from './kaynaklar/eczane/index.js';
 import { akaryakitCalistir } from './kaynaklar/akaryakit/index.js';
+import { akaryakitHaberCalistir } from './kaynaklar/akaryakit/haber.js';
 import { gorevleriCalistir } from './gorevler.js';
 
 const baslangic = Date.now();
@@ -14,6 +15,7 @@ await elektrikCalistir();
 await suCalistir();
 await eczaneCalistir();
 await akaryakitCalistir();
+await akaryakitHaberCalistir();   // zam/indirim haberleri (20 dk'da bir)
 await gorevleriCalistir(8);   // Claude'un keşif görevleri (yoksa hiçbir şey yapmaz)
 
 console.log(`bitti (${((Date.now() - baslangic) / 1000).toFixed(1)} sn)`);
