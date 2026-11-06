@@ -19,7 +19,7 @@ const SEMT_ILCE = {
 
 export function coz(html) {
   return epano(html).map((e) => {
-    const bolge = e.ilce.trim();
+    const bolge = (e.ilce ?? '').trim();
     const ilce = SEMT_ILCE[bolge.toLocaleUpperCase('tr')];
     const ad = bolge.replace(/[\s-]*\d+$/, '').trim();
     const semtNotu = ilce || ad.toLocaleUpperCase('tr') !== bolge.toLocaleUpperCase('tr') ? bolge : null;

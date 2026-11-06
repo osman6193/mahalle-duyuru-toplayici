@@ -1,11 +1,16 @@
 // Nöbetçi eczane kaynakları (il eczacı odaları). Saatte bir çalışır.
-// Yeni il eklemek için: ./<il>.js dosyası (KAYNAK, IL_ID, cek()) yaz, aşağıdaki listeye ekle.
+// Ortak "epano" altyapılı odalar ./odalar.js listesinde (tek satır = bir il).
+// Farklı siteler için: ./<il>.js dosyası (KAYNAK, IL_ID, cek()) yaz, aşağıdaki listeye ekle.
 import { db, durumYaz } from '../../supabase.js';
-import * as bursa from './bursa.js';
 import * as izmir from './izmir.js';
 import * as ankara from './ankara.js';
+import { ODALAR, odaCek } from './odalar.js';
 
-const KAYNAKLAR = [bursa, izmir, ankara];
+const KAYNAKLAR = [
+  izmir,
+  ankara,
+  ...ODALAR.map((o) => ({ KAYNAK: o.kaynak, IL_ID: o.il, cek: () => odaCek(o) })),
+];
 
 // Saat yazmayan sitelerde: sabah 08:30'dan önce görünen liste dünkü nöbettir
 function nobetGunu() {
