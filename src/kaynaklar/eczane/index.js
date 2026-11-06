@@ -4,11 +4,15 @@
 import { db, durumYaz } from '../../supabase.js';
 import * as izmir from './izmir.js';
 import * as ankara from './ankara.js';
+import * as antalya from './antalya.js';
+import * as sanliurfa from './sanliurfa.js';
 import { ODALAR, odaCek } from './odalar.js';
 
 const KAYNAKLAR = [
   izmir,
   ankara,
+  antalya,
+  sanliurfa,
   ...ODALAR.map((o) => ({ KAYNAK: o.kaynak, IL_ID: o.il, cek: () => odaCek(o) })),
 ];
 
