@@ -34,10 +34,18 @@ async function sonBasari(kaynak) {
 }
 
 export async function eczaneCalistir({ zorla = false } = {}) {
-  for (const k of KAYNAKLAR) {
+  // ~60 site: aynı anda 6 tanesi okunur (turun 9 dakikalık sınırına sığsın)
+  const sira = [...KAYNAKLAR];
+  await Promise.all(Array.from({ length: 6 }, async () => {
+    for (let k = sira.shift(); k; k = sira.shift()) await kaynakCalistir(k, zorla);
+  }));
+}
+
+async function kaynakCalistir(k, zorla) {
+  {
     // 10 dakikalık cron'da her kaynağı saatte bir oku
     // Sabah nöbet devrinde (08:20–10:30) her turda oku ki yeni liste gecikmesin
-    if (!zorla && !devirSaati() && Date.now() - (await sonBasari(k.KAYNAK)) < 55 * 60_000) continue;
+    if (!zorla && !devirSaati() && Date.now() - (await sonBasari(k.KAYNAK)) < 55 * 60_000) return;
     try {
       const liste = await k.cek();
       if (!liste.length) throw new Error('liste boş geldi (site biçimi değişmiş olabilir)');
