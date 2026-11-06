@@ -115,8 +115,9 @@ export async function cek() {
       const ad = mahAdi(m.mahalle.mahalleAdi ?? m.mahalle.ad ?? m.mahalle.adi);
       for (const k of m.detay) sonuc.push(kesintiKur(ilce, ad ? [ad] : [], k));
     }
-    // Detay hiç alınamadıysa en azından ilçe düzeyinde bir kesinti yaz (özet bilgisiyle)
-    if (!d.tum?.length && !d.mahalleler.length) {
+    // Detay sorgusu HATA verdiyse en azından ilçe düzeyinde bir kesinti yaz (özet bilgisiyle).
+    // Hatasız boş dönmesi = arıza bitmiş, özet henüz güncellenmemiş: yazma.
+    if (!d.tum?.length && !d.mahalleler.length && d.hatalar?.length) {
       const bugun = new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
       sonuc.push({
         kaynak: KAYNAK, kaynak_id: `ozet-${d.ilce.ilceKodu}-${bugun}`, il: 'İSTANBUL', ilceler: [ilce],
