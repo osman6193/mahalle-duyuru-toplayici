@@ -11,7 +11,10 @@ import * as muski from './muski.js';
 import * as tiski from './tiski.js';
 import * as asat from './asat.js';
 import * as kaski from './kaski.js';
+import * as buski from './buski.js';
+import * as gaski from './gaski.js';
+import * as oski from './oski.js';
 
-const KAYNAKLAR = [izsu, iski, aski, saski, teski, muski, tiski, asat, kaski];
+const KAYNAKLAR = [izsu, iski, aski, saski, teski, muski, tiski, asat, kaski, buski, gaski, oski];
 
 export const suCalistir = () => kesintileriCalistir('su', KAYNAKLAR);
