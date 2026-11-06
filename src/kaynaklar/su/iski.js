@@ -19,7 +19,15 @@ function tarih(s) {
 }
 
 // Uç nokta düz istekle 403 veriyor (Strapi yetkisi tarayıcıdaki sayfa oturumuna bağlı).
-// Bu yüzden sayfayı gerçek bir tarayıcıda açıp sitenin kendi yaptığı isteğin cevabını okuyoruz.
+// Bu yüzden sayfayı gerçek bir tarayıcıda açıp sitenin kendi istemcisiyle ($nuxt.$axios) soruyoruz.
+//
+// Akış (sitenin kendisi gibi):
+//   1) bolgeselAriza/listesi            -> [{ ilceAdi:"Kağıthane", ilceKodu:"BE", arizaAdedi:3, etkilenenMahalleAdedi:"11" }]  (sadece özet)
+//   2) bolgeselAriza/arizaDetayiFiltreli?ilceKodu=BE&mahalleKodu=   -> ilçenin tüm arızaları (deneniyor)
+//   3) olmazsa: abonelikHizmetleri/mahalleler?ilceKodu=BE -> mahalleler; her mahalle için arizaDetayiFiltreli
+// Detay cevabının alan adları HENÜZ GÖRÜLMEDİ: ilk dolu cevaplar 'ornek-iski-detay' olarak saklanır.
+const MAKS_MAHALLE = 60;
+
 async function tarayiciylaOku() {
   const { chromium } = await import('playwright');
   const browser = await chromium.launch({ headless: true });
@@ -30,33 +38,96 @@ async function tarayiciylaOku() {
     await page.goto(SAYFA, { waitUntil: 'domcontentloaded', timeout: 60000 });
     const cevap = await cevapBekle;
     if (!cevap.ok()) throw new Error(`HTTP ${cevap.status()} (tarayıcı içinden)`);
-    return await cevap.text();
+    const ozet = JSON.parse(await cevap.text());
+    const ilceler = Array.isArray(ozet?.data) ? ozet.data.filter((x) => x?.ilceKodu) : [];
+    const detaylar = [];
+    if (ilceler.length) {
+      await page.waitForFunction(() => !!window.$nuxt?.$axios, null, { timeout: 30000 });
+      for (const ilce of ilceler) {
+        const sonuc = await page.evaluate(async ({ kod, maks }) => {
+          const ax = window.$nuxt.$axios;
+          const dizi = (r) => (Array.isArray(r?.data?.data) ? r.data.data : Array.isArray(r?.data) ? r.data : []);
+          const cikti = { tum: null, mahalleler: [], hatalar: [] };
+          try {
+            cikti.tum = dizi(await ax.post(`iski/bolgeselAriza/arizaDetayiFiltreli?ilceKodu=${kod}&mahalleKodu=`));
+          } catch (e) { cikti.hatalar.push(`tum: ${e?.response?.status ?? e}`); }
+          if (cikti.tum?.length) return cikti;
+          try {
+            const mahalleler = dizi(await ax.post(`iski/abonelikHizmetleri/mahalleler?ilceKodu=${kod}`)).slice(0, maks);
+            for (const m of mahalleler) {
+              const mkod = m.mahalleKodu ?? m.kod ?? m.id;
+              if (mkod == null) continue;
+              try {
+                const d = dizi(await ax.post(`iski/bolgeselAriza/arizaDetayiFiltreli?ilceKodu=${kod}&mahalleKodu=${mkod}`));
+                if (d.length) cikti.mahalleler.push({ mahalle: m, detay: d });
+              } catch (e) { cikti.hatalar.push(`${mkod}: ${e?.response?.status ?? e}`); }
+            }
+          } catch (e) { cikti.hatalar.push(`mahalleler: ${e?.response?.status ?? e}`); }
+          return cikti;
+        }, { kod: ilce.ilceKodu, maks: MAKS_MAHALLE });
+        detaylar.push({ ilce, ...sonuc });
+      }
+    }
+    return { ilceler, detaylar };
   } finally {
     await browser.close();
   }
 }
 
-export async function cek() {
-  const metin = await tarayiciylaOku();
-  const veri = JSON.parse(metin);
-  const liste = Array.isArray(veri?.data) ? veri.data : Array.isArray(veri?.data?.items) ? veri.data.items : Array.isArray(veri) ? veri : null;
-  if (!liste) return [];                       // "kesinti bulunmamaktadır"
-  await ornekSakla(KAYNAK, URL, metin);
+// İSKİ'nin kısaltmaları -> bizim ilçe adları
+const ILCE_ADI = { 'G.O.PAŞA': 'GAZİOSMANPAŞA', 'B.ÇEKMECE': 'BÜYÜKÇEKMECE', 'K.ÇEKMECE': 'KÜÇÜKÇEKMECE' };
+const ilceAdi = (s) => { const u = String(s ?? '').trim().toLocaleUpperCase('tr'); return ILCE_ADI[u] ?? u; };
+const mahAdi = (s) => String(s ?? '').replace(/\s+(MAHALLES[İI]|MAH\.?)\s*$/i, '').trim();
 
-  return liste.map((k) => {
-    const ilce = al(k, 'ilce', 'ilceAdi', 'Ilce', 'IlceAdi', 'district');
-    const mahStr = al(k, 'mahalleler', 'mahalle', 'Mahalleler', 'Mahalle', 'etkilenenMahalleler');
-    const mahalleler = (Array.isArray(mahStr) ? mahStr : String(mahStr || '').split(/[,;]/)).map((s) => String(s).trim()).filter(Boolean);
-    const bas = al(k, 'baslangicTarihi', 'kesintiTarihi', 'arizaTarihi', 'BaslangicTarihi', 'baslangic', 'tarih');
-    const bit = al(k, 'bitisTarihi', 'tahminiBitisTarihi', 'arizaGiderilmeTarihi', 'BitisTarihi', 'bitis');
-    const id = al(k, 'id', 'Id', 'arizaId', 'ArizaId') ?? createHash('sha1').update([ilce, mahalleler.join('|'), bas].join('#')).digest('hex').slice(0, 20);
-    return {
-      kaynak: KAYNAK, kaynak_id: String(id), il: 'İSTANBUL',
-      ilceler: ilce ? [ilce] : [],
-      detay: ilce ? [{ ilce, mahalleler: mahalleler.map((ad) => ({ ad })) }] : [],
-      baslangic: tarih(bas), bitis: tarih(bit),
-      neden: al(k, 'arizaTipi', 'tip', 'neden', 'ArizaTipi'),
-      aciklama: al(k, 'aciklama', 'description', 'Aciklama'),
-    };
-  }).filter((k) => k.ilceler.length && k.baslangic);
+/** Bir detay kaydını kesintiye çevirir (alan adları tahmini; örnek görülünce kesinleşecek) */
+function kesintiKur(ilce, mahalleler, k) {
+  const bas = al(k, 'arizaTarihi', 'baslangicTarihi', 'kesintiTarihi', 'arizaBaslangicTarihi', 'BaslangicTarihi', 'baslangic', 'tarih');
+  const bit = al(k, 'tahminiBitisTarihi', 'arizaGiderilmeTarihi', 'bitisTarihi', 'tahminiGiderilmeTarihi', 'BitisTarihi', 'bitis');
+  const detayMah = al(k, 'mahalleAdi', 'mahalle', 'etkilenenMahalleler', 'mahalleler');
+  const mah = [...new Set([...mahalleler, ...(Array.isArray(detayMah) ? detayMah : String(detayMah || '').split(/[,;]/)).map(mahAdi)].filter(Boolean))];
+  const bugun = new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
+  const baslangic = tarih(bas) ?? `${bugun}T00:00:00+03:00`;
+  const id = al(k, 'arizaNo', 'arizaId', 'id', 'Id', 'ArizaId') ?? createHash('sha1').update([ilce, mah.slice().sort().join('|'), bas ?? bugun].join('#')).digest('hex').slice(0, 20);
+  return {
+    kaynak: KAYNAK, kaynak_id: String(id), il: 'İSTANBUL',
+    ilceler: [ilce],
+    detay: [{ ilce, mahalleler: mah.map((ad) => ({ ad })) }],
+    baslangic, bitis: tarih(bit),
+    neden: al(k, 'arizaTipi', 'arizaTuru', 'tip', 'neden', 'ArizaTipi') ?? 'Su arızası',
+    aciklama: al(k, 'aciklama', 'arizaAciklamasi', 'description', 'Aciklama'),
+  };
+}
+
+export async function cek() {
+  const { ilceler, detaylar } = await tarayiciylaOku();
+  if (!ilceler.length) return [];                       // "kesinti bulunmamaktadır"
+  if (detaylar.some((d) => d.tum?.length || d.mahalleler.length)) await ornekSakla(`${KAYNAK}-detay`, URL, JSON.stringify(detaylar));
+
+  const sonuc = [];
+  for (const d of detaylar) {
+    const ilce = ilceAdi(d.ilce.ilceAdi);
+    if (d.tum?.length) for (const k of d.tum) sonuc.push(kesintiKur(ilce, [], k));
+    for (const m of d.mahalleler) {
+      const ad = mahAdi(m.mahalle.mahalleAdi ?? m.mahalle.ad ?? m.mahalle.adi);
+      for (const k of m.detay) sonuc.push(kesintiKur(ilce, ad ? [ad] : [], k));
+    }
+    // Detay hiç alınamadıysa en azından ilçe düzeyinde bir kesinti yaz (özet bilgisiyle)
+    if (!d.tum?.length && !d.mahalleler.length) {
+      const bugun = new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
+      sonuc.push({
+        kaynak: KAYNAK, kaynak_id: `ozet-${d.ilce.ilceKodu}-${bugun}`, il: 'İSTANBUL', ilceler: [ilce],
+        detay: [{ ilce, mahalleler: [] }], baslangic: `${bugun}T00:00:00+03:00`, bitis: null, neden: 'Su arızası',
+        aciklama: `${d.ilce.arizaAdedi ?? ''} arıza, ${d.ilce.etkilenenMahalleAdedi ?? '?'} mahalle etkileniyor (İSKİ).`.trim(),
+      });
+    }
+  }
+  // Aynı kimlik birden çok mahalle sorgusunda dönebilir: birleştir
+  const birlesik = new Map();
+  for (const k of sonuc) {
+    const v = birlesik.get(k.kaynak_id);
+    if (!v) { birlesik.set(k.kaynak_id, k); continue; }
+    const adlar = new Set([...v.detay[0].mahalleler, ...k.detay[0].mahalleler].map((x) => x.ad));
+    v.detay[0].mahalleler = [...adlar].map((ad) => ({ ad }));
+  }
+  return [...birlesik.values()];
 }
