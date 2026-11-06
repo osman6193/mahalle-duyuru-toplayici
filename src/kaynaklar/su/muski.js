@@ -2,7 +2,7 @@
 //   <div data-status="devam" data-region="MENTEŞE" data-type="plansiz"> … Kesinti Tarihi 06.11.2026 10:50
 //     … Tahmini Süre 6 Saat … Etkilenen Mahalleler YENİKÖY Mah., … … Kesinti Türü Arıza / Plansız
 import { getir } from '../../getir.js';
-import { metne, kimlik, sayisalTarih, sureEkle, mahalleAdi, detayKur } from './ortak.js';
+import { BASLIKLAR, metne, kimlik, sayisalTarih, sureEkle, mahalleAdi, detayKur } from './ortak.js';
 
 export const KAYNAK = 'muski';
 const URL = 'https://www.muski.gov.tr/su-kesintileri';
@@ -46,7 +46,7 @@ export function coz(html) {
 }
 
 export async function cek() {
-  const yanit = await getir(URL, { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'text/html' }, signal: AbortSignal.timeout(30000) });
+  const yanit = await getir(URL, { headers: BASLIKLAR, signal: AbortSignal.timeout(30000) });
   if (!yanit.ok) throw new Error(`HTTP ${yanit.status}`);
   const html = await yanit.text();
   if (!/id=["']outagesGrid["']/.test(html)) throw new Error('outagesGrid bulunamadı (site yapısı değişmiş olabilir)');

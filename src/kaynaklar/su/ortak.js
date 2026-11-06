@@ -1,6 +1,13 @@
 // Su kesinti okuyucularının ortak yardımcıları.
 import { createHash } from 'node:crypto';
 
+/** Kısa "Mozilla/5.0" bazı sitelerde 403 alıyor; tam tarayıcı başlıkları */
+export const BASLIKLAR = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36',
+  Accept: 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'tr-TR,tr;q=0.9',
+};
+
 /** HTML'i düz metne çevirir (sayısal ve adlı varlıklar dahil: &#x130; -> İ) */
 export function metne(h) {
   return String(h ?? '')

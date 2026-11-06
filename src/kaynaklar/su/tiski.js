@@ -3,7 +3,7 @@
 //   <small>Kesinti Sebebi</small><span>…</span> <small>Kesinti Başlangıç</small><span>2026-11-06 10:30:00.0</span>
 //   <small>Tahmini Bitiş</small><span>…</span> <div>AÇIKLAMA</div>
 import { getir } from '../../getir.js';
-import { metne, kimlik, sayisalTarih, mahalleAdi, detayKur } from './ortak.js';
+import { BASLIKLAR, metne, kimlik, sayisalTarih, mahalleAdi, detayKur } from './ortak.js';
 
 export const KAYNAK = 'tiski';
 const URL = 'https://www.tiski.gov.tr/Tiski/SuKesintileri';
@@ -48,7 +48,7 @@ export function coz(html) {
 }
 
 export async function cek() {
-  const yanit = await getir(URL, { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'text/html' }, signal: AbortSignal.timeout(30000) });
+  const yanit = await getir(URL, { headers: BASLIKLAR, signal: AbortSignal.timeout(30000) });
   if (!yanit.ok) throw new Error(`HTTP ${yanit.status}`);
   return coz(await yanit.text());
 }

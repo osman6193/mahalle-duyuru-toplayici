@@ -4,7 +4,7 @@
 //       <td>BAFRA / ALTINAY MAH. / ,BAFRA / ŞİRİNKÖY MAH. / KÖSEİLYAS CAD.</td></tr>
 // Etkilenen yerler: virgülle ayrılmış "İLÇE / MAHALLE / (sokak)" üçlüleri.
 import { getir } from '../../getir.js';
-import { metne, kimlik, ayliTarih, mahalleAdi, detayKur } from './ortak.js';
+import { BASLIKLAR, metne, kimlik, ayliTarih, mahalleAdi, detayKur } from './ortak.js';
 
 export function tabloCoz(html, kaynak, il) {
   const govde = html.match(/<th>\s*Etkilenen Yerler\s*<\/th>[\s\S]*?<tbody>([\s\S]*?)<\/tbody>/i);
@@ -41,7 +41,7 @@ export function tabloCoz(html, kaynak, il) {
 }
 
 export async function tabloCek(url, kaynak, il) {
-  const yanit = await getir(url, { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'text/html' }, signal: AbortSignal.timeout(30000) });
+  const yanit = await getir(url, { headers: BASLIKLAR, signal: AbortSignal.timeout(30000) });
   if (!yanit.ok) throw new Error(`HTTP ${yanit.status}`);
   return tabloCoz(await yanit.text(), kaynak, il);
 }
