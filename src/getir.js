@@ -65,6 +65,7 @@ function istekAt(url, { method = 'GET', headers = {}, body, timeout = 30000 }, c
             status: res.statusCode,
             headers: { get: (k) => res.headers[k.toLowerCase()] ?? null },
             text: async () => govde.toString('utf8'),
+            arrayBuffer: async () => govde.buffer.slice(govde.byteOffset, govde.byteOffset + govde.byteLength),
             json: async () => JSON.parse(govde.toString('utf8')),
           });
         });

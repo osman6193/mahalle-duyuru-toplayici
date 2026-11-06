@@ -6,6 +6,8 @@
 //   <h4 class="red border"><strong>AD</strong> - İLÇE</h4>          (Balıkesir…)
 //   <h4 class="red border"><strong>AD</strong></h4> <p><i class='fa fa-arrow-right …'></i> İLÇE<br> (Kayseri…)
 // Ardından: fa-home ADRES · fa-phone <a href="tel:..."> · maps?q=ENLEM,BOYLAM · (varsa) "GG.AA.YYYY SS:DD / GG.AA.YYYY SS:DD"
+import { getir as guvenliGetir } from '../../getir.js';
+
 const metne = (h) =>
   h.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
     .replace(/&#0?39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim();
@@ -152,7 +154,8 @@ export async function getir(url) {
 }
 
 async function getirBir(url) {
-  const yanit = await fetch(url, {
+  // getir.js: eksik ara sertifikayı tamamlayıp doğrulamalı istek atar (Karaman vb.)
+  const yanit = await guvenliGetir(url, {
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36', 'Accept-Language': 'tr-TR,tr;q=0.9' },
     signal: AbortSignal.timeout(45000),
   });
