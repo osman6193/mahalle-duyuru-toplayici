@@ -136,7 +136,22 @@ export function coz(html) {
   return sonuc;
 }
 
+// Bağlantı hatasında (sertifika zinciri eksik vb.) bir kez daha, sonra http:// ile dener
 export async function getir(url) {
+  try {
+    return await getirBir(url);
+  } catch (e) {
+    if (!/fetch failed|ECONNRESET|socket|certificate|UNABLE_TO|ETIMEDOUT/i.test(`${e?.message} ${e?.cause?.code ?? ''} ${e?.cause?.message ?? ''}`)) throw e;
+    try {
+      return await getirBir(url);
+    } catch (e2) {
+      if (!url.startsWith('https://')) throw e2;
+      return getirBir(url.replace(/^https:/, 'http:'));
+    }
+  }
+}
+
+async function getirBir(url) {
   const yanit = await fetch(url, {
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36', 'Accept-Language': 'tr-TR,tr;q=0.9' },
     signal: AbortSignal.timeout(45000),
