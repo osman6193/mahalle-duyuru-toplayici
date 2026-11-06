@@ -8,6 +8,12 @@ export const BASLIKLAR = {
   'Accept-Language': 'tr-TR,tr;q=0.9',
 };
 
+// Türkçe karakterlerin adlı HTML varlıkları
+const ADLI = {
+  '&ccedil;': 'ç', '&Ccedil;': 'Ç', '&uuml;': 'ü', '&Uuml;': 'Ü', '&ouml;': 'ö', '&Ouml;': 'Ö',
+  '&gbreve;': 'ğ', '&Gbreve;': 'Ğ', '&scedil;': 'ş', '&Scedil;': 'Ş', '&Idot;': 'İ', '&inodot;': 'ı', '&icirc;': 'î',
+};
+
 /** HTML'i düz metne çevirir (sayısal ve adlı varlıklar dahil: &#x130; -> İ) */
 export function metne(h) {
   return String(h ?? '')
@@ -15,6 +21,7 @@ export function metne(h) {
     .replace(/<[^>]+>/g, ' ')
     .replace(/&#x([0-9a-f]+);/gi, (_, x) => String.fromCodePoint(parseInt(x, 16)))
     .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+    .replace(/&([CcGgIiOoSsUu])(cedil|uml|breve|circ);|&Idot;|&inodot;|&iacute;/g, (t, h, tur) => ADLI[t] ?? (h ? h : t))
     .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'")
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/\s+/g, ' ')

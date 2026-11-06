@@ -14,7 +14,8 @@ import * as kaski from './kaski.js';
 import * as buski from './buski.js';
 import * as gaski from './gaski.js';
 import * as oski from './oski.js';
+import * as eski from './eski.js';
 
-const KAYNAKLAR = [izsu, iski, aski, saski, teski, muski, tiski, asat, kaski, buski, gaski, oski];
+const KAYNAKLAR = [izsu, iski, aski, saski, teski, muski, tiski, asat, kaski, buski, gaski, oski, eski];
 
 export const suCalistir = () => kesintileriCalistir('su', KAYNAKLAR);
