@@ -13,9 +13,11 @@ const SAYFA = 'https://iski.istanbul/abone-hizmetleri/ariza-kesinti/';
 const al = (o, ...adlar) => { for (const a of adlar) if (o?.[a] != null && o[a] !== '') return o[a]; return null; };
 function tarih(s) {
   if (!s) return null;
-  const tr = String(s).match(/^(\d{2})[./](\d{2})[./](\d{4})\s*(\d{2}):(\d{2})/);
-  if (tr) return `${tr[3]}-${tr[2]}-${tr[1]}T${tr[4]}:${tr[5]}:00+03:00`;
-  return /[zZ]|[+-]\d{2}:?\d{2}$/.test(s) ? s : `${String(s).slice(0, 19)}+03:00`;
+  // "06/11/2026 13:30:00" ya da yalnız tarih "06/11/2026" (saat yoksa gün başı)
+  const tr = String(s).match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  if (tr) return `${tr[3]}-${tr[2].padStart(2, '0')}-${tr[1].padStart(2, '0')}T${(tr[4] ?? '00').padStart(2, '0')}:${tr[5] ?? '00'}:00+03:00`;
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return /[zZ]|[+-]\d{2}:?\d{2}$/.test(s) ? s : `${String(s).slice(0, 19)}+03:00`;
+  return null;
 }
 
 // Uç nokta düz istekle 403 veriyor (Strapi yetkisi tarayıcıdaki sayfa oturumuna bağlı).
@@ -23,9 +25,11 @@ function tarih(s) {
 //
 // Akış (sitenin kendisi gibi):
 //   1) bolgeselAriza/listesi            -> [{ ilceAdi:"Kağıthane", ilceKodu:"BE", arizaAdedi:3, etkilenenMahalleAdedi:"11" }]  (sadece özet)
-//   2) bolgeselAriza/arizaDetayiFiltreli?ilceKodu=BE&mahalleKodu=   -> ilçenin tüm arızaları (deneniyor)
-//   3) olmazsa: abonelikHizmetleri/mahalleler?ilceKodu=BE -> mahalleler; her mahalle için arizaDetayiFiltreli
-// Detay cevabının alan adları HENÜZ GÖRÜLMEDİ: ilk dolu cevaplar 'ornek-iski-detay' olarak saklanır.
+//   2) bolgeselAriza/arizaDetayiFiltreli?ilceKodu=BE&mahalleKodu=   -> boş döner (denenir, gerekirse diye)
+//   3) abonelikHizmetleri/mahalleler?ilceKodu=BE -> [{mahalleAdi:"ACARLAR MAH", mahalleKodu:"134"}];
+//      her mahalle için arizaDetayiFiltreli -> [{ arizaNo:"10000514151", arizaNeviAciklamasi:"İÇME SUYU … ARIZASI",
+//        baslamaTarihi:"06/11/2026" (yalnız tarih), tahminiBitisTarihi:"06/11/2026 13:30:00", ilceAdi, mahalleAdi }]
+//   Aynı arizaNo birden çok mahallede görünür (mahalleye göre farklı bitiş saatiyle): birleştirilir, en geç bitiş alınır.
 const MAKS_MAHALLE = 60;
 
 async function tarayiciylaOku() {
@@ -93,7 +97,7 @@ function kesintiKur(ilce, mahalleler, k) {
     ilceler: [ilce],
     detay: [{ ilce, mahalleler: mah.map((ad) => ({ ad })) }],
     baslangic, bitis: tarih(bit),
-    neden: al(k, 'arizaTipi', 'arizaTuru', 'tip', 'neden', 'ArizaTipi') ?? 'Su arızası',
+    neden: al(k, 'arizaNeviAciklamasi', 'arizaTipi', 'arizaTuru', 'tip', 'neden') ?? 'Su arızası',
     aciklama: al(k, 'aciklama', 'arizaAciklamasi', 'description', 'Aciklama'),
   };
 }
@@ -128,6 +132,7 @@ export async function cek() {
     if (!v) { birlesik.set(k.kaynak_id, k); continue; }
     const adlar = new Set([...v.detay[0].mahalleler, ...k.detay[0].mahalleler].map((x) => x.ad));
     v.detay[0].mahalleler = [...adlar].map((ad) => ({ ad }));
+    if (k.bitis && (!v.bitis || new Date(k.bitis) > new Date(v.bitis))) v.bitis = k.bitis;
   }
   return [...birlesik.values()];
 }
