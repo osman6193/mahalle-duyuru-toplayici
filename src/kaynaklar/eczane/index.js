@@ -9,6 +9,7 @@ import * as sanliurfa from './sanliurfa.js';
 import * as gaziantep from './gaziantep.js';
 import * as rize from './rize.js';
 import * as usak from './usak.js';
+import * as giresun from './giresun.js';
 import { ODALAR, odaCek } from './odalar.js';
 
 const KAYNAKLAR = [
@@ -19,6 +20,7 @@ const KAYNAKLAR = [
   gaziantep,
   rize,
   usak,
+  giresun,
   ...ODALAR.map((o) => ({ KAYNAK: o.kaynak, IL_ID: o.il, cek: () => odaCek(o) })),
 ];
 
