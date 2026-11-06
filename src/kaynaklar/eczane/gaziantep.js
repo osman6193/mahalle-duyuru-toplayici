@@ -1,7 +1,7 @@
 // Gaziantep Eczacı Odası — https://www.gaziantepeo.org.tr/nobetci-eczaneler (tablo)
 //   <td colspan="12">ŞAHİNBEY NÖBETÇİ ECZANELER …</td>
 //   <tr><td> AD ECZANESİ </td><td>ADRES / <b>İLÇE</b><br />Telefon : 0 342 …</td></tr>
-// Konum yok: ilçe adı sunucuda eşleşir.
+// Konum yok: ilçe adı sunucuda eşleşir. Oda Kilis'i de kapsar ("KİLİS MERKEZ", Musabeyli, Elbeyli).
 import { getir } from './epano.js';
 
 export const KAYNAK = 'eczane-gaziantep';
@@ -28,12 +28,16 @@ export function coz(html) {
     const ad = metne(td[0]);
     if (!/eczane/i.test(ad)) continue;
     const [adresKismi, telKismi = ''] = td[1].split(/<br\s*\/?>/i);
-    const ilce = adresKismi.match(/<b>([^<]+)<\/b>/i)?.[1]?.trim() ?? bolum;
+    let ilce = adresKismi.match(/<b>([^<]+)<\/b>/i)?.[1]?.trim() ?? bolum;
+    const kilisMerkez = /^K[İI]L[İI]S(\s+MERKEZ)?$/i.test(ilce ?? '');
+    if (kilisMerkez) ilce = 'Merkez';
     const adres = metne(adresKismi.replace(/\/\s*<b>[^<]*<\/b>\s*$/i, ''));
     const telefon = metne(telKismi).replace(/^Telefon\s*:\s*/i, '') || null;
     sonuc.push({
       ad,
       ilce: ilce ? basHarf(ilce) : null,
+      il_id: kilisMerkez ? 79 : IL_ID,
+      iller: [79],
       adres: adres || null,
       telefon,
       enlem: null,

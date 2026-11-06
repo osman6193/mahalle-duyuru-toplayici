@@ -1,6 +1,7 @@
 // Ortak "epano" altyapısını kullanan eczacı odaları — tek çözücüyle (epano.js) okunur.
 // Her satır bir sayfa: { kaynak, il (plaka), url, iller? }
-//   iller: sayfada başka illerin eczaneleri de varsa (bölüm başlığı ya da ilçe adı il adıysa o ile yazılır)
+//   iller: sayfada başka illerin eczaneleri de varsa. Bölüm başlığı il adıysa o ile yazılır; ayrıca sunucu
+//          (nobet_kaydet) ilçe adını önce ana ilde, bulamazsa bu illerde arar.
 // Yeni oda eklemek: sayfası epano ise buraya bir satır yeter.
 import { coz, getir } from './epano.js';
 
@@ -52,7 +53,7 @@ export const ODALAR = [
   { kaynak: 'eczane-nigde', il: 51, url: w('neo.org.tr') },
   { kaynak: 'eczane-nevsehir', il: 50, url: w('nevsehireo.org.tr') },
   { kaynak: 'eczane-osmaniye', il: 80, url: w('osmaniyeeczaciodasi.org.tr') },
-  { kaynak: 'eczane-samsun', il: 55, url: w('samsuneczaciodasi.org.tr') },
+  { kaynak: 'eczane-samsun', il: 55, url: w('samsuneczaciodasi.org.tr'), iller: [55, 57] },
   { kaynak: 'eczane-sakarya', il: 54, url: w('seo.org.tr') },
   { kaynak: 'eczane-bolu', il: 14, url: w('seo.org.tr', 'nobetci-eczaneler/14') },
   { kaynak: 'eczane-siirt', il: 56, url: w('siirteo.org.tr') },
@@ -92,6 +93,7 @@ export async function odaCek(oda) {
     const p = adlar.get(sade(e.bolum_il)) ?? adlar.get(sade(e.ilce));
     // İlçe yerine il adı yazıyorsa (ör. "BARTIN") ilçeyi konumdan bulmaya bırak
     const ilceIlAdi = adlar.has(sade(e.ilce));
-    return { ...e, il_id: p ?? oda.il, ilce: ilceIlAdi ? null : e.ilce };
+    // iller: sunucu ilçeyi ana ilde bulamazsa odanın diğer illerinde de arar (ör. Samsun sayfasındaki Boyabat → Sinop)
+    return { ...e, il_id: p ?? oda.il, ilce: ilceIlAdi ? null : e.ilce, iller: oda.iller };
   });
 }
