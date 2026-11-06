@@ -37,6 +37,7 @@ export const ODALAR = [
   { kaynak: 'eczane-hatay', il: 31, url: w('hatayeo.org.tr') },
   { kaynak: 'eczane-isparta', il: 32, url: w('ispartaeo.org.tr') },
   { kaynak: 'eczane-kahramanmaras', il: 46, url: w('kahramanmaraseo.org.tr') },
+  { kaynak: 'eczane-karaman', il: 70, url: w('karamaneo.org.tr', 'nobet-listesi') },
   { kaynak: 'eczane-kastamonu', il: 37, url: w('kastamonueo.org.tr', 'nobetci-eczaneler/37') },
   { kaynak: 'eczane-cankiri', il: 18, url: w('kastamonueo.org.tr', 'nobetci-eczaneler/18') },
   { kaynak: 'eczane-karabuk', il: 78, url: w('kastamonueo.org.tr', 'nobetci-eczaneler/78') },

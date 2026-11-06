@@ -47,7 +47,7 @@ function bolumCoz(t) {
   return { ad: ad || null, il: il || null };
 }
 function bolumAdi(t) {
-  let s = metne(t).replace(/\b(BUGÜN|BUGUN|Bugün)\b/gi, '')
+  let s = metne(t).replace(/\d{1,2}[-./]\d{1,2}[-./]\d{4}/g, '').replace(/\b(BUGÜN|BUGUN|Bugün)\b/gi, '')
     .replace(/N[ÖOöo]BET[ÇCçc][İIi]\s+ECZANE(LER[İIi]?|S[İIi])?/gi, '').replace(/\s*-\s*$/, '').trim();
   if (!s || s.length > 40 || /\d/.test(s) || /'(da|de|ta|te)\b/i.test(s)) return null;
   if (/oda(s[ıi])?\b|göster|goster|harita|eczanes[iİ]|duyuru|menü|giriş|arama|yazdır|kart/i.test(s)) return null;
@@ -114,7 +114,7 @@ export function coz(html) {
       if (im && !/harita|tıklay|konum/i.test(im)) adres = im;
     }
     const tel = [...b.matchAll(/href=["']tel:([^"']+)["']/gi)].map((m) => m[1].trim()).filter(Boolean);
-    const telMetin = tel.length ? null : satir(b, 'phone');
+    const telMetin = tel.length ? null : satir(b, 'phone')?.replace(/[\s-]+$/, '') || null;
     const [enlem, boylam] = konumBul(b);
     // Telefonu, adresi ve konumu olmayan "kart" bir eczane değildir (düğme, form…)
     if (!tel.length && !telMetin && !adres && enlem == null) continue;

@@ -6,6 +6,8 @@ import * as izmir from './izmir.js';
 import * as ankara from './ankara.js';
 import * as antalya from './antalya.js';
 import * as sanliurfa from './sanliurfa.js';
+import * as gaziantep from './gaziantep.js';
+import * as rize from './rize.js';
 import { ODALAR, odaCek } from './odalar.js';
 
 const KAYNAKLAR = [
@@ -13,6 +15,8 @@ const KAYNAKLAR = [
   ankara,
   antalya,
   sanliurfa,
+  gaziantep,
+  rize,
   ...ODALAR.map((o) => ({ KAYNAK: o.kaynak, IL_ID: o.il, cek: () => odaCek(o) })),
 ];
 
