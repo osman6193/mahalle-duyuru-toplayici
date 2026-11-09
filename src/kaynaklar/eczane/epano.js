@@ -156,7 +156,8 @@ export async function getir(url) {
 async function getirBir(url) {
   // getir.js: eksik ara sertifikayı tamamlayıp doğrulamalı istek atar (Karaman vb.)
   const yanit = await guvenliGetir(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36', 'Accept-Language': 'tr-TR,tr;q=0.9' },
+    // Kendimizi açıkça tanıtıyoruz: site yöneticisi kim olduğumuzu ve nasıl ulaşacağını görsün
+    headers: { 'User-Agent': 'MahallemBot/1.0 (+https://mahallemapp.com.tr; osman@mahallemapp.com.tr)', 'Accept-Language': 'tr-TR,tr;q=0.9' },
     signal: AbortSignal.timeout(45000),
   });
   if (!yanit.ok) throw new Error(`HTTP ${yanit.status}`);

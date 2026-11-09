@@ -12,6 +12,10 @@ import * as usak from './usak.js';
 import * as giresun from './giresun.js';
 import { ODALAR, odaCek } from './odalar.js';
 
+// Aynı firmanın (Oben Teknoloji "epano") sunucusundaki odalar: bu sunucuyu yormamak için seyrek ve sırayla okunur.
+// 9 Kasım 2026'da sık okuma yüzünden sunucumuzun IP'si engellendi (HTTP 403); engeli aşmaya çalışmıyoruz.
+const EPANO = new Set(['eczane-izmir', ...ODALAR.map((o) => o.kaynak)]);
+
 const KAYNAKLAR = [
   izmir,
   ankara,
@@ -40,24 +44,54 @@ function devirSaati() {
   return dk >= 8 * 60 + 20 && dk <= 10 * 60 + 30;
 }
 
-async function sonBasari(kaynak) {
-  const { data } = await db.from('toplayici_durum').select('son_basari').eq('kaynak', kaynak).maybeSingle();
-  return data?.son_basari ? new Date(data.son_basari).getTime() : 0;
+async function durum(kaynak) {
+  const { data } = await db.from('toplayici_durum').select('son_basari, son_calisma').eq('kaynak', kaynak).maybeSingle();
+  const t = (x) => (x ? new Date(x).getTime() : 0);
+  return { basari: t(data?.son_basari), calisma: t(data?.son_calisma) };
 }
+
+/** Bugün (TR) 08:40'ın zaman damgası; henüz 08:40 olmadıysa dünkü */
+function sabahDevri() {
+  const s = new Date(Date.now() + 3 * 3600_000);
+  const d = Date.UTC(s.getUTCFullYear(), s.getUTCMonth(), s.getUTCDate(), 8, 40) - 3 * 3600_000;
+  return d > Date.now() ? d - 86400_000 : d;
+}
+
+/** epano odaları: sabah devrinden sonra bir kez (yeni liste), sonra en fazla 6 saatte bir */
+function epanoZamani(d) {
+  if (d.basari < sabahDevri() && Date.now() - d.calisma >= 30 * 60_000) return true;
+  return Date.now() - d.calisma >= 6 * 3600_000;
+}
+
+const bekle = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function eczaneCalistir({ zorla = false } = {}) {
-  // ~60 site: aynı anda 6 tanesi okunur (turun 9 dakikalık sınırına sığsın)
-  const sira = [...KAYNAKLAR];
-  await Promise.all(Array.from({ length: 6 }, async () => {
-    for (let k = sira.shift(); k; k = sira.shift()) await kaynakCalistir(k, zorla);
-  }));
+  // Ayrı siteler aynı anda 3'er; epano odaları tek tek ve aralarında 3 sn beklenerek (tek sunucu)
+  const ayri = KAYNAKLAR.filter((k) => !EPANO.has(k.KAYNAK));
+  const epano = KAYNAKLAR.filter((k) => EPANO.has(k.KAYNAK));
+  await Promise.all([
+    ...Array.from({ length: 3 }, async () => {
+      for (let k = ayri.shift(); k; k = ayri.shift()) await kaynakCalistir(k, zorla);
+    }),
+    (async () => {
+      for (const k of epano) if (await kaynakCalistir(k, zorla)) await bekle(3000);
+    })(),
+  ]);
 }
 
+/** Kaynağı okur; istek attıysa true döner */
 async function kaynakCalistir(k, zorla) {
   {
-    // 10 dakikalık cron'da her kaynağı saatte bir oku
-    // Sabah nöbet devrinde (08:20–10:30) her turda oku ki yeni liste gecikmesin
-    if (!zorla && !devirSaati() && Date.now() - (await sonBasari(k.KAYNAK)) < 55 * 60_000) return;
+    const d = await durum(k.KAYNAK);
+    if (!zorla) {
+      if (EPANO.has(k.KAYNAK)) {
+        if (!epanoZamani(d)) return false;
+      } else {
+        // Diğerleri saatte bir; sabah nöbet devrinde (08:20–10:30) 20 dakikada bir
+        const aralik = devirSaati() ? 20 * 60_000 : 55 * 60_000;
+        if (Date.now() - Math.max(d.basari, d.calisma) < aralik) return false;
+      }
+    }
     try {
       const liste = await k.cek();
       if (!liste.length) throw new Error('liste boş geldi (site biçimi değişmiş olabilir)');
@@ -83,5 +117,6 @@ async function kaynakCalistir(k, zorla) {
       console.error(`[${k.KAYNAK}] hata:`, e.message);
       await durumYaz(k.KAYNAK, { basarili: false, hata: e.message });
     }
+    return true;
   }
 }
