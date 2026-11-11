@@ -59,7 +59,8 @@ function sabahDevri() {
 
 /** epano odaları: sabah devrinden sonra bir kez (yeni liste), sonra en fazla 6 saatte bir */
 function epanoZamani(d) {
-  if (d.basari < sabahDevri() && Date.now() - d.calisma >= 30 * 60_000) return true;
+  // Bugünkü devirden sonra hiç denenmediyse bir kez dene; sonra (başarılı ya da engelli) 6 saatte bir
+  if (d.calisma < sabahDevri()) return true;
   return Date.now() - d.calisma >= 6 * 3600_000;
 }
 
