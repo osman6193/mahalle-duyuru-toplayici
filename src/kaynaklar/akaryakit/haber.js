@@ -1,8 +1,9 @@
 // Akaryakıt zam/indirim haberleri: Google Haberler RSS'inden "zam geliyor" başlıklarını toplar,
+// sadece güvenilir ulusal kaynaklardan (CNN Türk, Habertürk, TRT, NTV, AA…) gelenleri alır,
 // Supabase'e taslak olarak yazar (akaryakit_haber_kaydet). Yönetici onaylayınca bildirim gider.
 // 20 dakikada bir çalışır; aynı haber sunucuda bir kez sayılır.
 import { db, durumYaz, hataMetni } from '../../supabase.js';
-import { basligiAyristir, rssOgeleri } from './haber-ayristir.js';
+import { basligiAyristir, rssOgeleri, guvenilirKaynak } from './haber-ayristir.js';
 
 const KAYNAK = 'akaryakit-haber';
 const ARAMALAR = [
@@ -43,7 +44,11 @@ export async function akaryakitHaberCalistir({ zorla = false } = {}) {
 
     const simdi = Date.now();
     const adaylar = [];
+    let elenen = 0;
     for (const o of ogeler.values()) {
+      const kaynakAdi = guvenilirKaynak(o.site);
+      if (!kaynakAdi) { elenen++; continue; }   // yerel site / toplayıcı
+      o.ad = kaynakAdi;
       const zaman = o.zaman ? Date.parse(o.zaman) : simdi;
       if (simdi - zaman > 36 * 3600_000) continue;   // eski haber
       const s = basligiAyristir(o.baslik, zaman);
@@ -56,7 +61,7 @@ export async function akaryakitHaberCalistir({ zorla = false } = {}) {
       if (error) throw new Error(error.message);
       ozet = data;
     }
-    console.log(`[${KAYNAK}] ${ogeler.size} haber, ${adaylar.length} aday, ${ozet.kaynak} yeni kaynak, ${ozet.yeni} yeni taslak, ${ozet.otomatik} otomatik onay`);
+    console.log(`[${KAYNAK}] ${ogeler.size} haber (${elenen} güvenilir olmayan kaynak elendi), ${adaylar.length} aday, ${ozet.kaynak} yeni kaynak, ${ozet.yeni} yeni taslak, ${ozet.otomatik} otomatik onay`);
     await durumYaz(KAYNAK, { basarili: true, adet: adaylar.length });
   } catch (e) {
     console.error(`[${KAYNAK}] hata:`, e.message);

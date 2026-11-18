@@ -96,7 +96,45 @@ export function basligiAyristir(hamBaslik, yayin = new Date()) {
   return { yon: zam ? 'zam' : 'indirim', etkin: etkinTarih(baslik, yayin), tutarlar };
 }
 
-/** RSS/Atom metninden haberler: [{baslik, url, ad, zaman}] */
+/**
+ * Güvenilir ulusal haber kaynakları (alan adı → görünen ad). Sadece bunlardan gelen zam/indirim haberleri alınır;
+ * yerel siteler ve haber toplayıcılar elenir. Liste bilinçli kısa tutuldu: ulusal TV, ajans, büyük gazete ve ekonomi yayınları.
+ */
+export const GUVENILIR_KAYNAKLAR = {
+  'cnnturk.com': 'CNN Türk',
+  'haberturk.com': 'Habertürk',
+  'trthaber.com': 'TRT Haber',
+  'trt.net.tr': 'TRT',
+  'ntv.com.tr': 'NTV',
+  'aa.com.tr': 'Anadolu Ajansı',
+  'bloomberght.com': 'Bloomberg HT',
+  'hurriyet.com.tr': 'Hürriyet',
+  'milliyet.com.tr': 'Milliyet',
+  'sabah.com.tr': 'Sabah',
+  'sozcu.com.tr': 'Sözcü',
+  'dunya.com': 'Dünya',
+  'ekonomim.com': 'Ekonomim',
+};
+
+/** Kaynak adresinden alan adı ("https://www.cnnturk.com/..." → "cnnturk.com") */
+export function siteAdi(adres) {
+  try {
+    return new URL(adres).hostname.toLowerCase().replace(/^(www|m|amp)\./, '');
+  } catch {
+    return '';
+  }
+}
+
+/** Alan adı listedeyse (alt alan adları dahil: ekonomi.haberturk.com) görünen adı, değilse null */
+export function guvenilirKaynak(site) {
+  if (!site) return null;
+  for (const [alan, ad] of Object.entries(GUVENILIR_KAYNAKLAR)) {
+    if (site === alan || site.endsWith(`.${alan}`)) return ad;
+  }
+  return null;
+}
+
+/** RSS/Atom metninden haberler: [{baslik, url, ad, site, zaman}] */
 export function rssOgeleri(xml) {
   const coz = (s) => String(s ?? '')
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
@@ -110,8 +148,10 @@ export function rssOgeleri(xml) {
     const url = coz(al('link'));
     if (!baslik || !url) continue;
     const kaynak = coz(al('source')) || (baslik.match(/\s-\s([^-]{2,60})$/)?.[1] ?? '');
+    // Google Haberler: <source url="https://www.cnnturk.com">CNN Türk</source>
+    const kaynakUrl = ic.match(/<source\b[^>]*\burl="([^"]+)"/)?.[1] ?? '';
     const z = Date.parse(coz(al('pubDate')) || '');
-    ogeler.push({ baslik, url, ad: kaynak, zaman: Number.isNaN(z) ? null : new Date(z).toISOString() });
+    ogeler.push({ baslik, url, ad: kaynak, site: siteAdi(kaynakUrl), zaman: Number.isNaN(z) ? null : new Date(z).toISOString() });
   }
   return ogeler;
 }
