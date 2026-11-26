@@ -1,8 +1,8 @@
 // Nöbetçi eczane kaynakları (il eczacı odaları). Saatte bir çalışır.
-// Ortak "epano" altyapılı odalar ./odalar.js listesinde (tek satır = bir il).
-// Farklı siteler için: ./<il>.js dosyası (KAYNAK, IL_ID, cek()) yaz, aşağıdaki listeye ekle.
+// Diğer iller NosyAPI'den gelir (Supabase "eczane-nosy" fonksiyonu); kendi kaynağı olan ilde NosyAPI atlanır.
+// Eski epano odaları (Oben Teknoloji, 9 Kasım 2026'dan beri IP engeli) 27 Kasım 2026'da kaldırıldı.
+// Yeni site için: ./<il>.js dosyası (KAYNAK, IL_ID, cek()) yaz, aşağıdaki listeye ekle.
 import { db, durumYaz } from '../../supabase.js';
-import * as izmir from './izmir.js';
 import * as ankara from './ankara.js';
 import * as antalya from './antalya.js';
 import * as sanliurfa from './sanliurfa.js';
@@ -10,14 +10,8 @@ import * as gaziantep from './gaziantep.js';
 import * as rize from './rize.js';
 import * as usak from './usak.js';
 import * as giresun from './giresun.js';
-import { ODALAR, odaCek } from './odalar.js';
-
-// Aynı firmanın (Oben Teknoloji "epano") sunucusundaki odalar: bu sunucuyu yormamak için seyrek ve sırayla okunur.
-// 9 Kasım 2026'da sık okuma yüzünden sunucumuzun IP'si engellendi (HTTP 403); engeli aşmaya çalışmıyoruz.
-const EPANO = new Set(['eczane-izmir', ...ODALAR.map((o) => o.kaynak)]);
 
 const KAYNAKLAR = [
-  izmir,
   ankara,
   antalya,
   sanliurfa,
@@ -25,7 +19,6 @@ const KAYNAKLAR = [
   rize,
   usak,
   giresun,
-  ...ODALAR.map((o) => ({ KAYNAK: o.kaynak, IL_ID: o.il, cek: () => odaCek(o) })),
 ];
 
 // Saat yazmayan sitelerde: sabah 08:30'dan önce görünen liste dünkü nöbettir
@@ -50,34 +43,15 @@ async function durum(kaynak) {
   return { basari: t(data?.son_basari), calisma: t(data?.son_calisma) };
 }
 
-/** Bugün (TR) 08:40'ın zaman damgası; henüz 08:40 olmadıysa dünkü */
-function sabahDevri() {
-  const s = new Date(Date.now() + 3 * 3600_000);
-  const d = Date.UTC(s.getUTCFullYear(), s.getUTCMonth(), s.getUTCDate(), 8, 40) - 3 * 3600_000;
-  return d > Date.now() ? d - 86400_000 : d;
-}
-
-/** epano odaları: sabah devrinden sonra bir kez (yeni liste), sonra en fazla 6 saatte bir */
-function epanoZamani(d) {
-  // Bugünkü devirden sonra hiç denenmediyse bir kez dene; sonra (başarılı ya da engelli) 6 saatte bir
-  if (d.calisma < sabahDevri()) return true;
-  return Date.now() - d.calisma >= 6 * 3600_000;
-}
-
-const bekle = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function eczaneCalistir({ zorla = false } = {}) {
-  // Ayrı siteler aynı anda 3'er; epano odaları tek tek ve aralarında 3 sn beklenerek (tek sunucu)
-  const ayri = KAYNAKLAR.filter((k) => !EPANO.has(k.KAYNAK));
-  const epano = KAYNAKLAR.filter((k) => EPANO.has(k.KAYNAK));
-  await Promise.all([
-    ...Array.from({ length: 3 }, async () => {
-      for (let k = ayri.shift(); k; k = ayri.shift()) await kaynakCalistir(k, zorla);
+  // Siteler aynı anda 3'er
+  const sira = [...KAYNAKLAR];
+  await Promise.all(
+    Array.from({ length: 3 }, async () => {
+      for (let k = sira.shift(); k; k = sira.shift()) await kaynakCalistir(k, zorla);
     }),
-    (async () => {
-      for (const k of epano) if (await kaynakCalistir(k, zorla)) await bekle(3000);
-    })(),
-  ]);
+  );
 }
 
 /** Kaynağı okur; istek attıysa true döner */
@@ -85,13 +59,9 @@ async function kaynakCalistir(k, zorla) {
   {
     const d = await durum(k.KAYNAK);
     if (!zorla) {
-      if (EPANO.has(k.KAYNAK)) {
-        if (!epanoZamani(d)) return false;
-      } else {
-        // Diğerleri saatte bir; sabah nöbet devrinde (08:20–10:30) 20 dakikada bir
-        const aralik = devirSaati() ? 20 * 60_000 : 55 * 60_000;
-        if (Date.now() - Math.max(d.basari, d.calisma) < aralik) return false;
-      }
+      // Saatte bir; sabah nöbet devrinde (08:20–10:30) 20 dakikada bir
+      const aralik = devirSaati() ? 20 * 60_000 : 55 * 60_000;
+      if (Date.now() - Math.max(d.basari, d.calisma) < aralik) return false;
     }
     try {
       const liste = await k.cek();
