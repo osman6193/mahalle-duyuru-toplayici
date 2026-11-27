@@ -23,12 +23,10 @@ async function teshis() {
     let parca = '';
     for (const x of betikler.slice(0, 12)) {
       const [, t] = await al(x);
-      const i = t.indexOf('KesintiGetirByKesintiTur');
-      if (i >= 0) parca += t.slice(Math.max(0, i - 160), i + 40);
-      const j = t.search(/https?:\/\/edrimsapi[^"'`]*/);
-      if (j >= 0) parca += ' || ' + t.slice(j, j + 120);
+      const j = t.indexOf('interceptors.request.use', t.search(/https?:\/\/edrimsapi/));
+      if (j >= 0) parca += t.slice(j + 24, j + 24 + 440);
     }
-    return `online=${kod} js=${betikler.length} | ${parca.replace(/\s+/g, ' ') || 'yok'}`;
+    return `${parca.replace(/\s+/g, ' ') || 'yok'}`;
   } catch (e) {
     return `teşhis hatası: ${e.message}`;
   }
