@@ -20,12 +20,15 @@ async function teshis() {
     const kok = 'https://online.uedas.com.tr/';
     const [kod, html] = await al(kok);
     const betikler = [...html.matchAll(/src="([^"]+\.js[^"]*)"/g)].map((m) => new globalThis.URL(m[1], kok).href);
-    const bulunan = new Set();
+    let parca = '';
     for (const x of betikler.slice(0, 12)) {
       const [, t] = await al(x);
-      for (const m of t.matchAll(/["'`]([A-Za-z0-9/_-]*Kesinti[A-Za-z0-9/_-]*)["'`]/g)) if (m[1].includes('/') || /Getir|Liste/.test(m[1])) bulunan.add(m[1]);
+      const i = t.indexOf('KesintiGetirByKesintiTur');
+      if (i >= 0) parca += t.slice(Math.max(0, i - 160), i + 40);
+      const j = t.search(/https?:\/\/edrimsapi[^"'`]*/);
+      if (j >= 0) parca += ' || ' + t.slice(j, j + 120);
     }
-    return `online=${kod} js=${betikler.length} | ${[...bulunan].slice(0, 25).join(' ; ') || 'yok'}`;
+    return `online=${kod} js=${betikler.length} | ${parca.replace(/\s+/g, ' ') || 'yok'}`;
   } catch (e) {
     return `teşhis hatası: ${e.message}`;
   }
