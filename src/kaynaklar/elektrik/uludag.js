@@ -18,7 +18,7 @@ async function teshis() {
   try {
     const ana = await fetch('https://www.uedas.com.tr/', { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(20000) });
     const html = await ana.text();
-    const betikler = [...html.matchAll(/src="([^"]+\.js[^"]*)"/g)].map((m) => new URL(m[1], 'https://www.uedas.com.tr/').href);
+    const betikler = [...html.matchAll(/src="([^"]+\.js[^"]*)"/g)].map((m) => new globalThis.URL(m[1], 'https://www.uedas.com.tr/').href);
     const bulunan = new Set();
     for (const kaynak of [html, ...(await Promise.all(betikler.slice(0, 15).map((u) => fetch(u, { signal: AbortSignal.timeout(15000) }).then((r) => r.text()).catch(() => ''))))]) {
       for (const m of kaynak.matchAll(/https?:\/\/[a-z0-9.-]*api[a-z0-9.-]*\.[a-z.]+[^"'`\s)]{0,80}/gi)) bulunan.add(m[0]);
