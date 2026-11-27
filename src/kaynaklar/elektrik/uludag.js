@@ -15,26 +15,17 @@ const tarih = (s) => (s ? `${s.slice(0, 19)}+03:00` : null); // "2026-10-27T09:3
 
 // GEÇİCİ teşhis (27 Kasım 2026, HTTP 404): sitenin JS'inde geçen API adreslerini hata metnine ekler
 async function teshis() {
-  const al = (u) => fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(15000) }).then(async (r) => [r.status, await r.text()]).catch((e) => [0, e.message]);
+  const al = (u) => fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(20000) }).then(async (r) => [r.status, await r.text()]).catch((e) => [0, e.message]);
   try {
-    const kok = 'https://www.uedas.com.tr';
-    const [, ana] = await al(kok + '/');
-    const linkler = [...new Set([...ana.matchAll(/href="([^"]*kesinti[^"]*)"/gi)].map((m) => m[1]))].slice(0, 6);
-    const sayfalar = [...new Set(['/tr/kesintiler', '/tr/planli-kesintiler', ...linkler])];
-    const notlar = [];
+    const kok = 'https://online.uedas.com.tr/';
+    const [kod, html] = await al(kok);
+    const betikler = [...html.matchAll(/src="([^"]+\.js[^"]*)"/g)].map((m) => new globalThis.URL(m[1], kok).href);
     const bulunan = new Set();
-    for (const yol of sayfalar.slice(0, 6)) {
-      const u = new globalThis.URL(yol, kok).href;
-      const [kod, html] = await al(u);
-      notlar.push(`${yol}=${kod}`);
-      const betikler = [...html.matchAll(/src="([^"]+\.js[^"]*)"/g)].map((m) => new globalThis.URL(m[1], u).href).filter((x) => !/googleapis|jquery|gtag|google/.test(x));
-      const icerikler = [html, ...(await Promise.all(betikler.slice(0, 10).map((x) => al(x).then((r) => r[1]))))];
-      for (const t of icerikler) {
-        for (const m of t.matchAll(/https?:\/\/[a-z0-9.-]*(?:edrims|uedas)[a-z0-9.-]*[^"'`\s)<]{0,90}/gi)) if (/api|kesinti/i.test(m[0])) bulunan.add(m[0]);
-        for (const m of t.matchAll(/[A-Za-z/]*Kesinti[A-Za-z]*/g)) if (m[0].includes('/')) bulunan.add(m[0]);
-      }
+    for (const x of betikler.slice(0, 12)) {
+      const [, t] = await al(x);
+      for (const m of t.matchAll(/["'`]([A-Za-z0-9/_-]*Kesinti[A-Za-z0-9/_-]*)["'`]/g)) if (m[1].includes('/') || /Getir|Liste/.test(m[1])) bulunan.add(m[1]);
     }
-    return `${notlar.join(' ')} | ${[...bulunan].slice(0, 10).join(' ; ') || 'yok'}`;
+    return `online=${kod} js=${betikler.length} | ${[...bulunan].slice(0, 25).join(' ; ') || 'yok'}`;
   } catch (e) {
     return `teşhis hatası: ${e.message}`;
   }
@@ -50,7 +41,7 @@ export async function cek() {
     body: JSON.stringify(GOVDE),
     signal: AbortSignal.timeout(30000),
   });
-  if (!yanit.ok) throw new Error(`HTTP ${yanit.status}: ${(await yanit.text().catch(() => '')).slice(0, 40)} | ${await teshis()}`);
+  if (!yanit.ok) throw new Error(`HTTP ${yanit.status}: ${(await yanit.text().catch(() => '')).slice(0, 0)}| ${await teshis()}`);
   const veri = await yanit.json();
   if (veri.SonucDurum !== 1 || !Array.isArray(veri.SonucIcerik)) throw new Error(`beklenmeyen cevap: ${veri.SonucMesaj || 'format'}`);
 
