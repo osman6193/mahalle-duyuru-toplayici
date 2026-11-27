@@ -13,25 +13,6 @@ const GOVDE = { ilKodu: -1, ilceKodu: -1, mahalleKodu: -1, csbmKodu: -1, aboneno
 
 const tarih = (s) => (s ? `${s.slice(0, 19)}+03:00` : null); // "2026-10-27T09:30:00" -> İstanbul saati
 
-// GEÇİCİ teşhis (27 Kasım 2026, HTTP 404): sitenin JS'inde geçen API adreslerini hata metnine ekler
-async function teshis() {
-  const al = (u) => fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(20000) }).then(async (r) => [r.status, await r.text()]).catch((e) => [0, e.message]);
-  try {
-    const kok = 'https://online.uedas.com.tr/';
-    const [kod, html] = await al(kok);
-    const betikler = [...html.matchAll(/src="([^"]+\.js[^"]*)"/g)].map((m) => new globalThis.URL(m[1], kok).href);
-    let parca = '';
-    for (const x of betikler.slice(0, 12)) {
-      const [, t] = await al(x);
-      const j = t.indexOf('interceptors.request.use', t.search(/https?:\/\/edrimsapi/));
-      if (j >= 0) parca += t.slice(j + 24, j + 24 + 440);
-    }
-    return `${parca.replace(/\s+/g, ' ') || 'yok'}`;
-  } catch (e) {
-    return `teşhis hatası: ${e.message}`;
-  }
-}
-
 export async function cek() {
   const yanit = await fetch(URL, {
     method: 'POST',
@@ -42,7 +23,7 @@ export async function cek() {
     body: JSON.stringify(GOVDE),
     signal: AbortSignal.timeout(30000),
   });
-  if (!yanit.ok) throw new Error(`HTTP ${yanit.status}: ${(await yanit.text().catch(() => '')).slice(0, 0)}| ${await teshis()}`);
+  if (!yanit.ok) throw new Error(`HTTP ${yanit.status}`);
   const veri = await yanit.json();
   if (veri.SonucDurum !== 1 || !Array.isArray(veri.SonucIcerik)) throw new Error(`beklenmeyen cevap: ${veri.SonucMesaj || 'format'}`);
 
