@@ -4,17 +4,27 @@
 // Kategori ('elektrik' | 'su' | 'dogalgaz') her kesintiye eklenir; Supabase başlığı ve bildirimi buna göre kurar.
 import { db, durumYaz, hataMetni } from '../supabase.js';
 
+// Tek istekte gönderilecek en fazla kesinti sayısı
+const PARCA = 300;
+
 async function kaynagiCalistir(kategori, k) {
   const ad = `${kategori}-${k.KAYNAK}`;
   try {
     const kesintiler = (await k.cek()).map((x) => ({ kategori, ...x }));
     const sayac = {};
-    for (const kesinti of kesintiler) {
-      // Fonksiyon adı tarihsel; kategori parametresiyle su/doğalgazı da kaydeder
-      const { data, error } = await db.rpc('elektrik_kesinti_kaydet', { p: kesinti });
-      const sonuc = error ? 'hata' : data;
-      sayac[sonuc] = (sayac[sonuc] || 0) + 1;
-      if (error) console.error(`  [${ad}] ${kesinti.kaynak_id}:`, error.message);
+    // Kesintiler parça parça TEK istekte gönderilir. Eskiden her kesinti ayrı istekti
+    // (günde ~225 bin istek → Supabase ücretsiz kota aşımı). Fonksiyon adı tarihsel;
+    // kategori alanıyla su/doğalgazı da kaydeder.
+    for (let i = 0; i < kesintiler.length; i += PARCA) {
+      const parca = kesintiler.slice(i, i + PARCA);
+      const { data, error } = await db.rpc('elektrik_kesinti_kaydet_toplu', { p_liste: parca });
+      if (error) {
+        sayac.hata = (sayac.hata || 0) + parca.length;
+        console.error(`  [${ad}] toplu kayıt (${parca.length}):`, error.message);
+        continue;
+      }
+      for (const [sonuc, adet] of Object.entries(data?.sayac ?? {})) sayac[sonuc] = (sayac[sonuc] || 0) + adet;
+      for (const h of data?.hatalar ?? []) console.error(`  [${ad}] ${h.kaynak_id}:`, h.hata);
     }
 
     // Listeden kalkan (iptal edilen) gelecek kesintileri pasife al.
